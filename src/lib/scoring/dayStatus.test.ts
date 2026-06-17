@@ -28,12 +28,28 @@ const empty: DailyLog = {
 };
 
 describe('day status for calendar', () => {
-  it('diet none when no entries', () => {
-    expect(getDietDayStatus(empty, 2000)).toBe('none');
+  const exceedPct = 10;
+
+  it('diet none when no entries at all', () => {
+    expect(getDietDayStatus(empty, 2000, exceedPct)).toBe('none');
+  });
+
+  it('diet unset when day logged but no calories', () => {
+    expect(
+      getDietDayStatus({ ...empty, exerciseActivityIds: ['2'] }, 2000, exceedPct),
+    ).toBe('unset');
   });
 
   it('diet good when within target', () => {
-    expect(getDietDayStatus({ ...empty, calories: 2000, calorieEntries: [2000] }, 2000)).toBe('good');
+    expect(getDietDayStatus({ ...empty, calories: 2000, calorieEntries: [2000] }, 2000, exceedPct)).toBe('good');
+  });
+
+  it('diet yellow when slightly over target', () => {
+    expect(getDietDayStatus({ ...empty, calories: 2100, calorieEntries: [2100] }, 2000, exceedPct)).toBe('yellow');
+  });
+
+  it('diet bad when over exceed limit', () => {
+    expect(getDietDayStatus({ ...empty, calories: 2300, calorieEntries: [2300] }, 2000, exceedPct)).toBe('bad');
   });
 
   it('exercise none when day fully skipped', () => {
@@ -67,12 +83,13 @@ describe('day status for calendar', () => {
     expect(getDestressDayStatus(empty)).toBe('none');
   });
 
-  it('fat red when over, green when ok', () => {
+  it('fat only when over', () => {
     expect(getFatDayStatus({ ...empty, fatOverGoal: true })).toBe('bad');
-    expect(getFatDayStatus({ ...empty, calories: 100, calorieEntries: [100] })).toBe('good');
+    expect(getFatDayStatus({ ...empty, calories: 100, calorieEntries: [100] })).toBe('none');
   });
 
-  it('sugar red when over', () => {
+  it('sugar only when over', () => {
     expect(getSugarDayStatus({ ...empty, sugarOverGoal: true })).toBe('bad');
+    expect(getSugarDayStatus(empty)).toBe('none');
   });
 });

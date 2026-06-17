@@ -8,11 +8,15 @@ import {
   getWeekStart,
 } from '../dates';
 
-export function getCalorieStatus(calories: number, target: number): CalorieStatus {
+export function getCalorieStatus(
+  calories: number,
+  target: number,
+  exceedPctMax: number = 10,
+): CalorieStatus {
   if (calories <= 0) return 'none';
-  const ratio = calories / target;
-  if (ratio <= 1.05) return 'good';
-  if (ratio <= 1.5) return 'yellow';
+  if (calories <= target) return 'good';
+  const exceedPct = ((calories - target) / target) * 100;
+  if (exceedPct <= exceedPctMax) return 'yellow';
   return 'bad';
 }
 
@@ -75,23 +79,24 @@ export function hasExerciseEntry(log: DailyLog): boolean {
 }
 
 export function hasAnyDayEntry(log: DailyLog): boolean {
-  return hasDietEntry(log) || hasExerciseEntry(log) || log.destressDone || log.isCheatDay;
+  return (
+    hasDietEntry(log) ||
+    hasExerciseEntry(log) ||
+    log.destressDone ||
+    log.isCheatDay ||
+    log.fatOverGoal ||
+    log.sugarOverGoal
+  );
 }
 
 export type BinaryDayStatus = 'good' | 'bad' | 'none';
 
 export function getFatDayStatus(log: DailyLog): BinaryDayStatus {
-  if (log.fatOverGoal) return 'bad';
-  if (hasDietEntry(log) || log.isCheatDay) return 'good';
-  if (hasAnyDayEntry(log)) return 'good';
-  return 'none';
+  return log.fatOverGoal ? 'bad' : 'none';
 }
 
 export function getSugarDayStatus(log: DailyLog): BinaryDayStatus {
-  if (log.sugarOverGoal) return 'bad';
-  if (hasDietEntry(log) || log.isCheatDay) return 'good';
-  if (hasAnyDayEntry(log)) return 'good';
-  return 'none';
+  return log.sugarOverGoal ? 'bad' : 'none';
 }
 
 export function getExerciseDayStatus(
@@ -113,9 +118,16 @@ export function getDestressDayStatus(log: DailyLog): DestressDayStatus {
   return log.destressDone ? 'good' : 'none';
 }
 
-export function getDietDayStatus(log: DailyLog, target: number): DayStatus {
-  if (!hasDietEntry(log)) return 'none';
-  return getCalorieStatus(getCalorieTotal(log), target);
+export type DietCalendarStatus = CalorieStatus | 'unset';
+
+export function getDietDayStatus(
+  log: DailyLog,
+  target: number,
+  exceedPctMax: number,
+): DietCalendarStatus {
+  if (!hasAnyDayEntry(log)) return 'none';
+  if (!hasDietEntry(log)) return 'unset';
+  return getCalorieStatus(getCalorieTotal(log), target, exceedPctMax);
 }
 
 export interface WeekDietScore {
@@ -145,7 +157,11 @@ export function scoreDietWeek(
     const log = getLogForDate(logs, date);
     if (log.isCheatDay) cheatDaysUsed++;
     const dayCalories = getCalorieTotal(log);
-    const status = getCalorieStatus(dayCalories, settings.calorieTarget);
+    const status = getCalorieStatus(
+      dayCalories,
+      settings.calorieTarget,
+      settings.dietCalorieExceedPctMax,
+    );
     if (status === 'good') good++;
     else if (status === 'yellow') yellow++;
     else if (status === 'bad') bad++;

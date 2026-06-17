@@ -3,6 +3,7 @@ import { getCalorieStatus } from '../lib/scoring';
 interface CalorieRingProps {
   total: number;
   target: number;
+  exceedPctMax?: number;
 }
 
 const SIZE = 140;
@@ -10,8 +11,8 @@ const STROKE = 10;
 const R = (SIZE - STROKE) / 2;
 const C = 2 * Math.PI * R;
 
-export function CalorieRing({ total, target }: CalorieRingProps) {
-  const status = getCalorieStatus(total, target);
+export function CalorieRing({ total, target, exceedPctMax = 10 }: CalorieRingProps) {
+  const status = getCalorieStatus(total, target, exceedPctMax);
   const pct = target > 0 ? (total / target) * 100 : 0;
   const ringPct = Math.min(pct, 100);
   const offset = C - (ringPct / 100) * C;

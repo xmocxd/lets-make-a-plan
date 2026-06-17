@@ -45,10 +45,11 @@ const emptyLog = (date: string, patch: Partial<DailyLog> = {}): DailyLog => ({
 
 describe('scoring', () => {
   it('classifies calorie status', () => {
-    expect(getCalorieStatus(2000, 2000)).toBe('good');
-    expect(getCalorieStatus(2100, 2000)).toBe('good');
-    expect(getCalorieStatus(2500, 2000)).toBe('yellow');
-    expect(getCalorieStatus(3200, 2000)).toBe('bad');
+    expect(getCalorieStatus(2000, 2000, 10)).toBe('good');
+    expect(getCalorieStatus(2100, 2000, 10)).toBe('yellow');
+    expect(getCalorieStatus(2200, 2000, 10)).toBe('yellow');
+    expect(getCalorieStatus(2201, 2000, 10)).toBe('bad');
+    expect(getCalorieStatus(3200, 2000, 10)).toBe('bad');
   });
 
   it('exercise half + half = full day', () => {

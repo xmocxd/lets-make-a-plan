@@ -38,7 +38,7 @@ export function HomePage() {
   const target = plan.settings.calorieTarget;
   const total = getCalorieTotal(log);
   const entries = log.calorieEntries ?? [];
-  const calStatus = getCalorieStatus(total, target);
+  const calStatus = getCalorieStatus(total, target, plan.settings.dietCalorieExceedPctMax);
   const exGood = isExerciseDayGood(log, plan.exerciseActivities);
 
   const handleMantraClick = async () => {
@@ -62,6 +62,10 @@ export function HomePage() {
     if (!value || value <= 0) return;
     saveEntries([...entries, value]);
     setEntryInput('');
+  };
+
+  const addQuickCalories = (value: number) => {
+    saveEntries([...entries, value]);
   };
 
   const toggleActivity = (id: string) => {
@@ -102,7 +106,11 @@ export function HomePage() {
         </div>
 
         <div className="calorie-row">
-          <CalorieRing total={total} target={target} />
+          <CalorieRing
+            total={total}
+            target={target}
+            exceedPctMax={plan.settings.dietCalorieExceedPctMax}
+          />
           <div className="calorie-side">
             <div className="add-row calorie-add-row compact">
               <input
@@ -116,6 +124,22 @@ export function HomePage() {
               />
               <button type="button" className="btn primary calorie-add-btn" onClick={addEntry}>
                 +
+              </button>
+            </div>
+            <div className="calorie-quick-row">
+              <button
+                type="button"
+                className="btn secondary calorie-quick-btn"
+                onClick={() => addQuickCalories(target)}
+              >
+                Calories OK
+              </button>
+              <button
+                type="button"
+                className="btn secondary calorie-quick-btn danger"
+                onClick={() => addQuickCalories(9999)}
+              >
+                Calories Over
               </button>
             </div>
             {entries.length > 0 && (

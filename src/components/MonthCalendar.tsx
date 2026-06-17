@@ -34,7 +34,11 @@ export function MonthCalendar({ plan, monthKey }: MonthCalendarProps) {
         dayNum: parseDate(date).getDate(),
         isCheatDay: log.isCheatDay,
         isRestDay: log.isRestDay,
-        diet: getDietDayStatus(log, plan.settings.calorieTarget),
+        diet: getDietDayStatus(
+          log,
+          plan.settings.calorieTarget,
+          plan.settings.dietCalorieExceedPctMax,
+        ),
         fat: getFatDayStatus(log),
         sugar: getSugarDayStatus(log),
         exercise: getExerciseDayStatus(log, plan.exerciseActivities),
@@ -67,27 +71,29 @@ export function MonthCalendar({ plan, monthKey }: MonthCalendarProps) {
                   </span>
                 ) : (
                   <>
-                    <span
-                      className={`cal-square diet ${cell.diet}`}
-                      title={`Diet: ${cell.diet}`}
-                      aria-label={`Diet ${cell.diet}`}
-                    >
-                      D
-                    </span>
-                    {trackFat && (
+                    {cell.diet !== 'unset' && (
                       <span
-                        className={`cal-square fat ${cell.fat}`}
-                        title={`Fat: ${cell.fat}`}
-                        aria-label={`Fat ${cell.fat}`}
+                        className={`cal-square diet ${cell.diet}`}
+                        title={`Diet: ${cell.diet}`}
+                        aria-label={`Diet ${cell.diet}`}
+                      >
+                        D
+                      </span>
+                    )}
+                    {trackFat && cell.fat === 'bad' && (
+                      <span
+                        className="cal-square fat bad"
+                        title="Fat over"
+                        aria-label="Fat over"
                       >
                         F
                       </span>
                     )}
-                    {trackSugar && (
+                    {trackSugar && cell.sugar === 'bad' && (
                       <span
-                        className={`cal-square sugar ${cell.sugar}`}
-                        title={`Sugar: ${cell.sugar}`}
-                        aria-label={`Sugar ${cell.sugar}`}
+                        className="cal-square sugar bad"
+                        title="Sugar over"
+                        aria-label="Sugar over"
                       >
                         S
                       </span>
@@ -99,13 +105,15 @@ export function MonthCalendar({ plan, monthKey }: MonthCalendarProps) {
                     rest
                   </span>
                 ) : (
-                  <span
-                    className={`cal-square exercise ${cell.exercise}`}
-                    title={`Exercise: ${cell.exercise}`}
-                    aria-label={`Exercise ${cell.exercise}`}
-                  >
-                    E
-                  </span>
+                  cell.exercise !== 'bad' && (
+                    <span
+                      className={`cal-square exercise ${cell.exercise}`}
+                      title={`Exercise: ${cell.exercise}`}
+                      aria-label={`Exercise ${cell.exercise}`}
+                    >
+                      E
+                    </span>
+                  )
                 )}
                 {cell.destress === 'good' && (
                   <span
@@ -132,17 +140,23 @@ export function MonthCalendar({ plan, monthKey }: MonthCalendarProps) {
             <span className="cal-square good">D</span> On goal
           </span>
           <span className="legend-item">
-            <span className="cal-square yellow">E</span> Half day
+            <span className="cal-square yellow">D</span> Over (a bit)
           </span>
           <span className="legend-item">
-            <span className="cal-square bad">E</span> Missed
+            <span className="cal-square bad">D</span> Over goal
+          </span>
+          <span className="legend-item">
+            <span className="cal-square none">D</span> Day skipped
+          </span>
+          <span className="legend-item">
+            <span className="cal-square yellow">E</span> Half day
           </span>
           <span className="legend-item">
             <span className="cal-square none">E</span> Day skipped
           </span>
           {(trackFat || trackSugar) && (
             <span className="legend-item">
-              <span className="cal-square good">F</span> OK · <span className="cal-square bad">F</span> Over
+              <span className="cal-square bad">F</span> · <span className="cal-square bad">S</span> Over only
             </span>
           )}
           <span className="legend-item">
