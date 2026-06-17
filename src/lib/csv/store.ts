@@ -99,6 +99,14 @@ export async function restoreLocalBackup(slot: number): Promise<PlanData> {
   return data;
 }
 
+export async function clearPlanStore(): Promise<void> {
+  const db = await getDb();
+  await db.delete(STORE, LIVE_KEY);
+  for (let slot = 0; slot < 3; slot++) {
+    await db.delete(STORE, `${BACKUP_PREFIX}${slot}`);
+  }
+}
+
 export function downloadCsv(csv: string, filename = 'plan.csv'): void {
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);

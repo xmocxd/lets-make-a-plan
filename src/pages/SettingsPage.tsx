@@ -17,9 +17,10 @@ import { createGooglePlan } from '../lib/sync/engine';
 import { listLocalBackups, restoreLocalBackup } from '../lib/csv/store';
 
 export function SettingsPage() {
-  const { plan, updateSettings, setPlan, triggerBackup } = usePlan();
+  const { plan, updateSettings, setPlan, triggerBackup, startFreshPlan } = usePlan();
   const [syncStatus, setSyncStatus] = useState('');
   const [backups, setBackups] = useState<{ slot: number; date?: string }[]>([]);
+  const [resetBusy, setResetBusy] = useState(false);
 
   if (!plan) return null;
 
@@ -68,6 +69,31 @@ export function SettingsPage() {
     const data = await restoreLocalBackup(slot);
     await setPlan(data);
     await loadBackups();
+  };
+
+  const handleStartNewPlan = async () => {
+    const driveNote = plan.meta.googleConnected
+      ? '\n\nYour current Google Drive spreadsheet will be left unchanged. A new spreadsheet will be created for the new plan.'
+      : '';
+    const ok = window.confirm(
+      `This will delete all existing data on this device and start a fresh plan. This cannot be undone.${driveNote}\n\nDo you want to proceed?`,
+    );
+    if (!ok) return;
+
+    setResetBusy(true);
+    try {
+      await initGoogleClient();
+      if (plan.meta.googleConnected) {
+        await requestAccessToken('');
+      }
+      await startFreshPlan();
+      setBackups([]);
+      setSyncStatus('');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to start new plan');
+    } finally {
+      setResetBusy(false);
+    }
   };
 
   return (
@@ -217,6 +243,24 @@ export function SettingsPage() {
             }}
           />
         </label>
+        <div className="danger-zone">
+          <h3>Start new plan</h3>
+          <p className="hint">
+            Delete all logs and lists on this device and reset to defaults. Local backup
+            snapshots are cleared too.
+            {m.googleConnected
+              ? ' Your linked Google spreadsheet is not modified; a new spreadsheet is created instead.'
+              : ''}
+          </p>
+          <button
+            type="button"
+            className="btn danger"
+            onClick={handleStartNewPlan}
+            disabled={resetBusy}
+          >
+            {resetBusy ? 'Starting…' : 'Start new plan'}
+          </button>
+        </div>
       </section>
 
       <section className="card">

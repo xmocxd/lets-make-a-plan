@@ -5,6 +5,7 @@ import { BackupBanner } from './components/BackupBanner';
 import { HomePage } from './pages/HomePage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
 import { DestressPage } from './pages/DestressPage';
+import { DestressListPage } from './pages/DestressListPage';
 import { ReportPage } from './pages/ReportPage';
 import { MantrasPage } from './pages/MantrasPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -38,6 +39,7 @@ function AppRoutes() {
           <Route path="/" element={<HomePage />} />
           <Route path="/activities" element={<ActivitiesPage />} />
           <Route path="/destress" element={<DestressPage />} />
+          <Route path="/destress/list" element={<DestressListPage />} />
           <Route path="/report" element={<ReportPage />} />
           <Route path="/mantras" element={<MantrasPage />} />
           <Route path="/settings" element={<SettingsPage />} />

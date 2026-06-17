@@ -4,6 +4,8 @@ interface ProgressBarProps {
   max?: number;
   goalMet?: boolean;
   unit?: string;
+  displayValue?: string;
+  fillClass?: 'good' | 'destress';
 }
 
 export function ProgressBar({
@@ -12,20 +14,33 @@ export function ProgressBar({
   max = 100,
   goalMet,
   unit = '%',
+  displayValue,
+  fillClass,
 }: ProgressBarProps) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
+  const valueClass =
+    fillClass === 'destress'
+      ? goalMet
+        ? 'destress'
+        : ''
+      : goalMet === true
+        ? 'good'
+        : goalMet === false
+          ? 'bad'
+          : '';
+  const fillVariant = fillClass ?? (goalMet ? 'good' : '');
+
   return (
     <div className="progress-block">
       <div className="progress-header">
         <span>{label}</span>
-        <span className={goalMet === true ? 'good' : goalMet === false ? 'bad' : ''}>
-          {value.toFixed(0)}
-          {unit}
+        <span className={valueClass}>
+          {displayValue ?? `${value.toFixed(0)}${unit}`}
         </span>
       </div>
       <div className="progress-track">
         <div
-          className={`progress-fill ${goalMet ? 'good' : ''}`}
+          className={`progress-fill ${fillVariant}`}
           style={{ width: `${pct}%` }}
         />
       </div>

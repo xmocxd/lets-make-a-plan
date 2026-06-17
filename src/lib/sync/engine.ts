@@ -1,5 +1,6 @@
 import type { PlanData } from '../../types/plan';
-import { savePlan, importPlanCsv, exportPlanCsv } from '../csv/store';
+import { createDefaultPlan } from '../../types/plan';
+import { savePlan, clearPlanStore, importPlanCsv, exportPlanCsv } from '../csv/store';
 import {
   pushPlanToSheet,
   pullPlanFromSheet,
@@ -80,6 +81,38 @@ export async function linkGooglePlan(spreadsheetId: string): Promise<PlanData> {
   return remote;
 }
 
+function newPlanSpreadsheetTitle(): string {
+  const date = new Date().toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+  return `Let's Make a Plan (${date})`;
+}
+
+export async function startNewPlan(googleConnected: boolean): Promise<PlanData> {
+  cancelScheduledSyncPush();
+  await clearPlanStore();
+
+  const plan = createDefaultPlan();
+  plan.meta.onboarded = true;
+
+  if (!googleConnected) {
+    await savePlan(plan);
+    return plan;
+  }
+
+  if (!getAccessToken()) await requestAccessToken('');
+  const spreadsheetId = await createPlanSpreadsheet(newPlanSpreadsheetTitle());
+  const ready = planFromCsvForNewSheet(plan);
+  ready.meta.spreadsheetId = spreadsheetId;
+  ready.meta.googleConnected = true;
+  ready.meta.onboarded = true;
+  await pushPlanToSheet(ready, spreadsheetId);
+  await savePlan(ready);
+  return ready;
+}
+
 export async function exportAndDownload(): Promise<void> {
   const csv = await exportPlanCsv();
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -97,6 +130,13 @@ export async function importFromFile(file: File): Promise<PlanData> {
 }
 
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function cancelScheduledSyncPush(): void {
+  if (syncTimer) {
+    clearTimeout(syncTimer);
+    syncTimer = null;
+  }
+}
 
 export function scheduleSyncPush(plan: PlanData, fn: (p: PlanData) => void): void {
   if (!plan.meta.googleConnected || !plan.meta.spreadsheetId) return;

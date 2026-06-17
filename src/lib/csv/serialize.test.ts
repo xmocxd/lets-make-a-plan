@@ -15,7 +15,6 @@ describe('csv serialize', () => {
       isCheatDay: false,
       fatOverGoal: false,
       sugarOverGoal: false,
-      fatSugarCheat: false,
       destressDone: true,
       isRestDay: false,
       exerciseActivityIds: ['ea1'],

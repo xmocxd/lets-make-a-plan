@@ -12,7 +12,7 @@ import { formatDate } from '../lib/dates';
 import { loadPlan, savePlan, initPlan } from '../lib/csv/store';
 import { getReportCard } from '../lib/scoring';
 import { runBackupIfDue, runBackup } from '../lib/backup';
-import { scheduleSyncPush } from '../lib/sync/engine';
+import { scheduleSyncPush, startNewPlan } from '../lib/sync/engine';
 import { initGoogleClient } from '../lib/google/auth';
 
 interface PlanContextValue {
@@ -28,6 +28,7 @@ interface PlanContextValue {
   report: ReturnType<typeof getReportCard> | null;
   triggerBackup: () => Promise<void>;
   clearBackupBanner: () => void;
+  startFreshPlan: () => Promise<void>;
 }
 
 const PlanContext = createContext<PlanContextValue | null>(null);
@@ -97,7 +98,6 @@ export function PlanProvider({ children }: { children: ReactNode }) {
               isCheatDay: false,
               fatOverGoal: false,
               sugarOverGoal: false,
-              fatSugarCheat: false,
               destressDone: false,
               isRestDay: false,
               exerciseActivityIds: [],
@@ -131,7 +131,6 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         isCheatDay: false,
         fatOverGoal: false,
         sugarOverGoal: false,
-        fatSugarCheat: false,
         destressDone: false,
         isRestDay: false,
         exerciseActivityIds: [],
@@ -147,7 +146,6 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         isCheatDay: false,
         fatOverGoal: false,
         sugarOverGoal: false,
-        fatSugarCheat: false,
         destressDone: false,
         isRestDay: false,
         exerciseActivityIds: [],
@@ -180,6 +178,12 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     setBackupError(null);
   }, []);
 
+  const startFreshPlan = useCallback(async () => {
+    if (!plan) return;
+    const fresh = await startNewPlan(plan.meta.googleConnected);
+    setPlanState(fresh);
+  }, [plan]);
+
   const value: PlanContextValue = {
     plan,
     loading,
@@ -193,6 +197,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     report,
     triggerBackup,
     clearBackupBanner,
+    startFreshPlan,
   };
 
   return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;

@@ -13,6 +13,7 @@ import { usePlan } from '../context/PlanContext';
 import { formatDate, getMonthKey, getMonthsBack } from '../lib/dates';
 import { getMonthlyTrend } from '../lib/scoring';
 import { ProgressBar } from '../components/ProgressBar';
+import { MonthCalendar } from '../components/MonthCalendar';
 
 export function ReportPage() {
   const { plan, report } = usePlan();
@@ -35,15 +36,19 @@ export function ReportPage() {
       <h1>Report card</h1>
 
       <section className="card">
-        <label>
-          View month{' '}
+        <h2>Month calendar</h2>
+        <label className="month-picker-row">
+          Month{' '}
           <input
             type="month"
             value={viewMonth}
             onChange={(e) => setViewMonth(e.target.value)}
           />
         </label>
+        <MonthCalendar plan={plan} monthKey={viewMonth} />
+      </section>
 
+      <section className="card">
         <h2>Goals vs scores</h2>
         <ProgressBar
           label="Diet (month)"

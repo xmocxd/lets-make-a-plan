@@ -29,7 +29,6 @@ export const SettingsSchema = z.object({
   fatTrackingEnabled: z.boolean().default(false),
   sugarTrackingEnabled: z.boolean().default(false),
   cheatDaysPerWeek: z.number().default(1),
-  fatSugarCheatDaysPerMonth: z.number().default(1),
   dietCalorieExceedPctMax: z.number().default(10),
   fatSugarExceedPctMax: z.number().default(20),
   restDaysPerWeek: z.number().default(1),
@@ -49,7 +48,6 @@ export const DailyLogSchema = z.object({
   isCheatDay: z.boolean().default(false),
   fatOverGoal: z.boolean().default(false),
   sugarOverGoal: z.boolean().default(false),
-  fatSugarCheat: z.boolean().default(false),
   destressDone: z.boolean().default(false),
   isRestDay: z.boolean().default(false),
   exerciseActivityIds: z.array(z.string()).default([]),
@@ -89,20 +87,43 @@ export const PlanDataSchema = z.object({
 export type PlanData = z.infer<typeof PlanDataSchema>;
 
 export const DEFAULT_MANTRAS: Omit<Mantra, 'lastShownAt'>[] = [
-  { id: 'm1', text: 'Progress, not perfection.', isDefault: true },
-  { id: 'm2', text: 'One day at a time.', isDefault: true },
-  { id: 'm3', text: 'Small steps lead to big changes.', isDefault: true },
-  { id: 'm4', text: 'You are capable of more than you know.', isDefault: true },
-  { id: 'm5', text: 'Rest is part of the plan.', isDefault: true },
+  { id: 'm1', text: 'How can I eat healthy today?', isDefault: true },
+  { id: 'm2', text: "Don't be so stressed over nothing", isDefault: true },
+  { id: 'm3', text: 'Go with a gentle force', isDefault: true },
+  { id: 'm4', text: 'Greed only brings forth misery', isDefault: true },
+  { id: 'm5', text: 'Simplify', isDefault: true },
+];
+
+export const DEFAULT_EXERCISE_ACTIVITIES: ExerciseActivity[] = [
+  { id: 'ea1', name: 'Walk 10k', goalWeight: 'half' },
+  { id: 'ea2', name: 'Walk 20k', goalWeight: 'full' },
+  { id: 'ea3', name: 'Bike', goalWeight: 'full' },
+  { id: 'ea4', name: 'Gym light', goalWeight: 'half' },
+  { id: 'ea5', name: 'Gym heavy', goalWeight: 'full' },
 ];
 
 export const DEFAULT_DESTRESS: Omit<DestressSuggestion, 'lastShownAt'>[] = [
-  { id: 'd1', text: 'Take a 10-minute walk' },
-  { id: 'd2', text: 'Deep breathing for 5 minutes' },
-  { id: 'd3', text: 'Listen to calming music' },
-  { id: 'd4', text: 'Stretch or gentle yoga' },
-  { id: 'd5', text: 'Write in a journal' },
-  { id: 'd6', text: 'Call a friend' },
+  { id: 'd1', text: 'Progressive Muscle Relaxation (PMR)' },
+  {
+    id: 'd2',
+    text: 'Self-massage or massage chair/gun: 15-20 minutes on neck, shoulders, back, feet.',
+  },
+  { id: 'd3', text: 'Foam rolling or lacrosse ball trigger point work' },
+  { id: 'd4', text: 'Sauna or hot springs: 15-25 minutes dry or wet heat.' },
+  { id: 'd5', text: 'Jacuzzi' },
+  { id: 'd6', text: 'Hot bath or epsom salt soak' },
+  { id: 'd7', text: 'Steam room session.' },
+  { id: 'd8', text: 'Sit in a park on a bench or in nature for a while' },
+  {
+    id: 'd9',
+    text: 'Calming walk in Japanese garden, botanical garden, or arboretum.',
+  },
+  { id: 'd10', text: 'Box breathing or 4-7-8 breathing: Structured counts.' },
+  { id: 'd11', text: 'Get a cup of Turkish tea — no heavy food with it.' },
+  { id: 'd12', text: 'Cryotherapy or cold plunge (if available).' },
+  { id: 'd13', text: 'Float tank session (sensory deprivation).' },
+  { id: 'd14', text: 'Sit by a fire pit or fireplace.' },
+  { id: 'd15', text: 'Get a haircut' },
 ];
 
 export function createDefaultPlan(): PlanData {
@@ -117,10 +138,7 @@ export function createDefaultPlan(): PlanData {
     },
     settings: SettingsSchema.parse({}),
     dailyLogs: [],
-    exerciseActivities: [
-      { id: 'ea1', name: 'Walk 30 min', goalWeight: 'half' },
-      { id: 'ea2', name: 'Full workout', goalWeight: 'full' },
-    ],
+    exerciseActivities: DEFAULT_EXERCISE_ACTIVITIES.map((a) => ({ ...a })),
     destressSuggestions: DEFAULT_DESTRESS.map((d) => ({ ...d })),
     mantras: DEFAULT_MANTRAS.map((m) => ({ ...m })),
   };

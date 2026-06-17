@@ -37,7 +37,7 @@ export function serializePlan(data: PlanData): string {
   }
 
   lines.push(SECTION('DailyLog'));
-  lines.push('date,calories,fat,sugar,isCheatDay,fatOverGoal,sugarOverGoal,fatSugarCheat,destressDone,isRestDay,exerciseActivityIds,calorieEntries');
+  lines.push('date,calories,fat,sugar,isCheatDay,fatOverGoal,sugarOverGoal,destressDone,isRestDay,exerciseActivityIds,calorieEntries');
   for (const log of data.dailyLogs) {
     const entries = log.calorieEntries?.length
       ? log.calorieEntries
@@ -46,7 +46,7 @@ export function serializePlan(data: PlanData): string {
         : [];
     lines.push(row([
       log.date, log.calories, log.fat, log.sugar,
-      log.isCheatDay, log.fatOverGoal, log.sugarOverGoal, log.fatSugarCheat,
+      log.isCheatDay, log.fatOverGoal, log.sugarOverGoal,
       log.destressDone, log.isRestDay, log.exerciseActivityIds.join('|'),
       entries.join('|'),
     ]));
@@ -146,9 +146,15 @@ export function deserializePlan(csv: string): PlanData {
       i = sec.end;
     } else if (line.startsWith('### DailyLog ###')) {
       const sec = parseSection(lines, i + 1);
+      const col = (name: string, legacyIndex: number) => {
+        const idx = sec.headers.indexOf(name);
+        return idx >= 0 ? idx : legacyIndex;
+      };
+      const hasLegacyFatSugarCheat = sec.headers.includes('fatSugarCheat');
       for (const r of sec.rows) {
-        const calorieEntries = r[11]
-          ? r[11].split('|').map(Number).filter((n) => !Number.isNaN(n) && n > 0)
+        const entriesIdx = hasLegacyFatSugarCheat ? 11 : 10;
+        const calorieEntries = r[entriesIdx]
+          ? r[entriesIdx].split('|').map(Number).filter((n) => !Number.isNaN(n) && n > 0)
           : Number(r[1]) > 0
             ? [Number(r[1])]
             : [];
@@ -161,13 +167,14 @@ export function deserializePlan(csv: string): PlanData {
           calorieEntries,
           fat: Number(r[2]) || 0,
           sugar: Number(r[3]) || 0,
-          isCheatDay: r[4] === 'true',
-          fatOverGoal: r[5] === 'true',
-          sugarOverGoal: r[6] === 'true',
-          fatSugarCheat: r[7] === 'true',
-          destressDone: r[8] === 'true',
-          isRestDay: r[9] === 'true',
-          exerciseActivityIds: r[10] ? r[10].split('|').filter(Boolean) : [],
+          isCheatDay: r[col('isCheatDay', 4)] === 'true',
+          fatOverGoal: r[col('fatOverGoal', 5)] === 'true',
+          sugarOverGoal: r[col('sugarOverGoal', 6)] === 'true',
+          destressDone: r[col('destressDone', hasLegacyFatSugarCheat ? 8 : 7)] === 'true',
+          isRestDay: r[col('isRestDay', hasLegacyFatSugarCheat ? 9 : 8)] === 'true',
+          exerciseActivityIds: r[col('exerciseActivityIds', hasLegacyFatSugarCheat ? 10 : 9)]
+            ? r[col('exerciseActivityIds', hasLegacyFatSugarCheat ? 10 : 9)].split('|').filter(Boolean)
+            : [],
         });
       }
       i = sec.end;
@@ -230,7 +237,6 @@ export function deserializePlan(csv: string): PlanData {
       fatTrackingEnabled: bool(settingsKv.fatTrackingEnabled),
       sugarTrackingEnabled: bool(settingsKv.sugarTrackingEnabled),
       cheatDaysPerWeek: num(settingsKv.cheatDaysPerWeek, 1),
-      fatSugarCheatDaysPerMonth: num(settingsKv.fatSugarCheatDaysPerMonth, 1),
       dietCalorieExceedPctMax: num(settingsKv.dietCalorieExceedPctMax, 10),
       fatSugarExceedPctMax: num(settingsKv.fatSugarExceedPctMax, 20),
       restDaysPerWeek: num(settingsKv.restDaysPerWeek, 1),

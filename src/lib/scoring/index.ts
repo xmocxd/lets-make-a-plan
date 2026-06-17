@@ -33,7 +33,6 @@ export function getLogForDate(logs: DailyLog[], date: string): DailyLog {
     isCheatDay: false,
     fatOverGoal: false,
     sugarOverGoal: false,
-    fatSugarCheat: false,
     destressDone: false,
     isRestDay: false,
     exerciseActivityIds: [],
@@ -58,6 +57,65 @@ export function isExerciseDayGood(
   activities: ExerciseActivity[],
 ): boolean {
   return exerciseDayWeight(log, activities) >= 1;
+}
+
+export type DayStatus = CalorieStatus;
+
+export function hasDietEntry(log: DailyLog): boolean {
+  const entries = log.calorieEntries?.length
+    ? log.calorieEntries
+    : log.calories > 0
+      ? [log.calories]
+      : [];
+  return entries.length > 0;
+}
+
+export function hasExerciseEntry(log: DailyLog): boolean {
+  return log.isRestDay || log.exerciseActivityIds.length > 0;
+}
+
+export function hasAnyDayEntry(log: DailyLog): boolean {
+  return hasDietEntry(log) || hasExerciseEntry(log) || log.destressDone || log.isCheatDay;
+}
+
+export type BinaryDayStatus = 'good' | 'bad' | 'none';
+
+export function getFatDayStatus(log: DailyLog): BinaryDayStatus {
+  if (log.fatOverGoal) return 'bad';
+  if (hasDietEntry(log) || log.isCheatDay) return 'good';
+  if (hasAnyDayEntry(log)) return 'good';
+  return 'none';
+}
+
+export function getSugarDayStatus(log: DailyLog): BinaryDayStatus {
+  if (log.sugarOverGoal) return 'bad';
+  if (hasDietEntry(log) || log.isCheatDay) return 'good';
+  if (hasAnyDayEntry(log)) return 'good';
+  return 'none';
+}
+
+export function getExerciseDayStatus(
+  log: DailyLog,
+  activities: ExerciseActivity[],
+): DayStatus {
+  if (!hasExerciseEntry(log)) {
+    return hasAnyDayEntry(log) ? 'bad' : 'none';
+  }
+  if (log.isRestDay || isExerciseDayGood(log, activities)) return 'good';
+  const weight = exerciseDayWeight(log, activities);
+  if (weight > 0) return 'yellow';
+  return 'bad';
+}
+
+export type DestressDayStatus = 'good' | 'none';
+
+export function getDestressDayStatus(log: DailyLog): DestressDayStatus {
+  return log.destressDone ? 'good' : 'none';
+}
+
+export function getDietDayStatus(log: DailyLog, target: number): DayStatus {
+  if (!hasDietEntry(log)) return 'none';
+  return getCalorieStatus(getCalorieTotal(log), target);
 }
 
 export interface WeekDietScore {
@@ -145,24 +203,24 @@ export function scoreFatSugarMonth(
   }
   const days = getDaysInMonth(monthKey);
   let overDays = 0;
-  let cheatUsed = 0;
-  let tracked = 0;
+  let eligible = 0;
 
   for (const date of days) {
     const log = getLogForDate(logs, date);
-    if (log.fatSugarCheat) cheatUsed++;
+    if (log.isCheatDay) continue;
+    const hasActivity =
+      hasDietEntry(log) ||
+      log.exerciseActivityIds.length > 0 ||
+      log.destressDone ||
+      log.isRestDay;
+    if (!hasActivity) continue;
+    eligible++;
     const fatOver = settings.fatTrackingEnabled && log.fatOverGoal;
     const sugarOver = settings.sugarTrackingEnabled && log.sugarOverGoal;
-    if (fatOver || sugarOver) {
-      if (!log.fatSugarCheat) overDays++;
-      tracked++;
-    } else if (getCalorieTotal(log) > 0 || log.destressDone || log.exerciseActivityIds.length) {
-      tracked++;
-    }
+    if (fatOver || sugarOver) overDays++;
   }
 
-  const eligible = Math.max(tracked - cheatUsed, 1);
-  const overPct = (overDays / eligible) * 100;
+  const overPct = eligible > 0 ? (overDays / eligible) * 100 : 0;
   return {
     overPct,
     goalMet: overPct < settings.fatSugarExceedPctMax,

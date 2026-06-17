@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { v4 as uuid } from 'uuid';
+import { Link } from 'react-router-dom';
 import { usePlan } from '../context/PlanContext';
 import { formatDate } from '../lib/dates';
 import { ToggleButton } from '../components/ToggleButton';
+import { ProgressBar } from '../components/ProgressBar';
 import type { DestressSuggestion } from '../types/plan';
 
 function pickSuggestion(items: DestressSuggestion[]): DestressSuggestion | null {
@@ -13,8 +14,7 @@ function pickSuggestion(items: DestressSuggestion[]): DestressSuggestion | null 
 }
 
 export function DestressPage() {
-  const { plan, getTodayLog, upsertDailyLog, setPlan } = usePlan();
-  const [newText, setNewText] = useState('');
+  const { plan, report, getTodayLog, upsertDailyLog, setPlan } = usePlan();
   const [suggestion, setSuggestion] = useState<DestressSuggestion | null>(null);
 
   const items = plan?.destressSuggestions ?? [];
@@ -29,6 +29,9 @@ export function DestressPage() {
 
   const today = formatDate();
   const log = getTodayLog();
+  const weekGoal = plan.settings.destressPerWeekGoal;
+  const weekCount = report?.destress.week.count ?? 0;
+  const weekGoalMet = report?.destress.week.goalMet ?? false;
 
   const shuffle = async () => {
     const pick = pickSuggestion(items);
@@ -48,22 +51,22 @@ export function DestressPage() {
     }
   };
 
-  const addSuggestion = async () => {
-    if (!newText.trim()) return;
-    await setPlan({
-      ...plan,
-      destressSuggestions: [
-        ...plan.destressSuggestions,
-        { id: uuid(), text: newText.trim() },
-      ],
-    });
-    setNewText('');
-  };
-
   return (
     <div className="page">
       <h1>Calm</h1>
-      <p className="subtitle">De-stress · {plan.settings.destressPerWeekGoal}× per week goal</p>
+      <p className="subtitle">De-stress · {weekGoal}× per week goal</p>
+
+      <section className="card">
+        <ProgressBar
+          label="This week"
+          value={weekCount}
+          max={weekGoal}
+          goalMet={weekGoalMet}
+          displayValue={`${weekCount}/${weekGoal} Done`}
+          fillClass="destress"
+          unit=""
+        />
+      </section>
 
       <section className="card">
         <ToggleButton
@@ -79,30 +82,16 @@ export function DestressPage() {
       </section>
 
       <section className="card">
-        <h2>Suggestion</h2>
+        <div className="section-header-row">
+          <h2>Suggestion</h2>
+          <Link to="/destress/list" className="btn-text header-link">
+            Your list
+          </Link>
+        </div>
         {suggestion && <p className="suggestion-text">{suggestion.text}</p>}
         <button type="button" className="btn secondary" onClick={shuffle}>
           Shuffle idea
         </button>
-      </section>
-
-      <section className="card">
-        <h2>Your list</h2>
-        <ul className="simple-list">
-          {plan.destressSuggestions.map((s) => (
-            <li key={s.id}>{s.text}</li>
-          ))}
-        </ul>
-        <div className="add-row">
-          <input
-            placeholder="Add activity"
-            value={newText}
-            onChange={(e) => setNewText(e.target.value)}
-          />
-          <button type="button" className="btn secondary" onClick={addSuggestion}>
-            Add
-          </button>
-        </div>
       </section>
     </div>
   );

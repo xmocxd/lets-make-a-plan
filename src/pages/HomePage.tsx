@@ -173,17 +173,6 @@ export function HomePage() {
             </ToggleButton>
           )}
 
-          {(plan.settings.fatTrackingEnabled || plan.settings.sugarTrackingEnabled) && (
-            <ToggleButton
-              pressed={log.fatSugarCheat}
-              onPress={() => upsertDailyLog(today, { fatSugarCheat: !log.fatSugarCheat })}
-              pressedVariant="warning"
-              iconOn="★"
-              iconOff="○"
-            >
-              F/S cheat
-            </ToggleButton>
-          )}
         </div>
 
         <hr className="section-divider" />

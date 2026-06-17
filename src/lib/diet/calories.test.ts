@@ -11,7 +11,6 @@ const base: DailyLog = {
   isCheatDay: false,
   fatOverGoal: false,
   sugarOverGoal: false,
-  fatSugarCheat: false,
   destressDone: false,
   isRestDay: false,
   exerciseActivityIds: [],
