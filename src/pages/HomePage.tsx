@@ -1,8 +1,11 @@
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { usePlan } from '../context/PlanContext';
 import { getCalorieStatus, isExerciseDayGood } from '../lib/scoring';
 import { formatDate } from '../lib/dates';
+import { getCalorieTotal, normalizeDailyCalories, sumCalorieEntries } from '../lib/diet/calories';
+import { CalorieRing } from '../components/CalorieRing';
+import { ToggleButton } from '../components/ToggleButton';
 import { ProgressBar } from '../components/ProgressBar';
 import type { Mantra } from '../types/plan';
 
@@ -17,18 +20,29 @@ function pickMantra(mantras: Mantra[]): Mantra | null {
 }
 
 export function HomePage() {
-  const { plan, report, getTodayLog, setPlan } = usePlan();
+  const { plan, report, getTodayLog, upsertDailyLog, setPlan } = usePlan();
   const navigate = useNavigate();
+  const [entryInput, setEntryInput] = useState('');
+
   const today = formatDate();
-  const log = getTodayLog();
+  const rawLog = getTodayLog();
+  const log = normalizeDailyCalories(rawLog);
 
   const mantra = useMemo(() => {
     if (!plan) return null;
     return pickMantra(plan.mantras);
   }, [plan]);
 
+  if (!plan || !report) return null;
+
+  const target = plan.settings.calorieTarget;
+  const total = getCalorieTotal(log);
+  const entries = log.calorieEntries ?? [];
+  const calStatus = getCalorieStatus(total, target);
+  const exGood = isExerciseDayGood(log, plan.exerciseActivities);
+
   const handleMantraClick = async () => {
-    if (!plan || !mantra) return;
+    if (!mantra) return;
     const mantras = plan.mantras.map((m) =>
       m.id === mantra.id ? { ...m, lastShownAt: new Date().toISOString() } : m,
     );
@@ -36,10 +50,28 @@ export function HomePage() {
     navigate('/mantras');
   };
 
-  if (!plan || !report) return null;
+  const saveEntries = (next: number[]) => {
+    upsertDailyLog(today, {
+      calorieEntries: next,
+      calories: sumCalorieEntries(next),
+    });
+  };
 
-  const calStatus = getCalorieStatus(log.calories, plan.settings.calorieTarget);
-  const exGood = isExerciseDayGood(log, plan.exerciseActivities);
+  const addEntry = () => {
+    const value = Number(entryInput);
+    if (!value || value <= 0) return;
+    saveEntries([...entries, value]);
+    setEntryInput('');
+  };
+
+  const toggleActivity = (id: string) => {
+    const ids = log.exerciseActivityIds.includes(id)
+      ? log.exerciseActivityIds.filter((x) => x !== id)
+      : [...log.exerciseActivityIds, id];
+    upsertDailyLog(today, { exerciseActivityIds: ids, isRestDay: false });
+  };
+
+  const exerciseStatus = log.isRestDay ? 'warning' : exGood ? 'good' : 'default';
 
   return (
     <div className="page">
@@ -49,65 +81,183 @@ export function HomePage() {
         </button>
       )}
 
-      <h1>Today</h1>
-      <p className="subtitle">{today}</p>
+      <div className="page-header-row">
+        <div>
+          <h1>Today</h1>
+          <p className="subtitle">{today}</p>
+        </div>
+        <Link to="/activities" className="btn-text header-link">
+          Activities →
+        </Link>
+      </div>
 
-      <section className="card today-summary">
-        <div className="today-row">
-          <span>Diet</span>
-          <span className={`badge ${calStatus}`}>
-            {log.calories} / {plan.settings.calorieTarget} kcal
+      <section className="card today-unified">
+        <div className="today-status-strip">
+          <span className={`status-pill ${calStatus}`}>
+            {total} kcal
+          </span>
+          <span className={`status-pill ${exerciseStatus}`}>
+            {log.isRestDay ? 'Rest' : exGood ? 'Exercise ✓' : 'Exercise'}
           </span>
         </div>
-        <div className="today-row">
-          <span>Exercise</span>
-          <span className={`badge ${log.isRestDay ? 'yellow' : exGood ? 'good' : 'none'}`}>
-            {log.isRestDay ? 'Rest day' : exGood ? 'Goal met' : 'In progress'}
-          </span>
+
+        <div className="calorie-row">
+          <CalorieRing total={total} target={target} />
+          <div className="calorie-side">
+            <div className="add-row calorie-add-row compact">
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="Add kcal"
+                className="input-lg compact-input"
+                value={entryInput}
+                onChange={(e) => setEntryInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addEntry()}
+              />
+              <button type="button" className="btn primary calorie-add-btn" onClick={addEntry}>
+                +
+              </button>
+            </div>
+            {entries.length > 0 && (
+              <ul className="calorie-entry-list compact">
+                {entries.map((amount, index) => (
+                  <li key={`${index}-${amount}`} className="calorie-entry-item">
+                    <span>{amount}</span>
+                    <button
+                      type="button"
+                      className="btn-text small"
+                      onClick={() => saveEntries(entries.filter((_, i) => i !== index))}
+                      aria-label={`Remove ${amount}`}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-        <div className="today-row">
-          <span>De-stress</span>
-          <span className={`badge ${log.destressDone ? 'good' : 'none'}`}>
-            {log.destressDone ? 'Done' : 'Not yet'}
-          </span>
+
+        <div className="toggle-row">
+          <ToggleButton
+            pressed={log.isCheatDay}
+            onPress={() => upsertDailyLog(today, { isCheatDay: !log.isCheatDay })}
+            pressedVariant="warning"
+            iconOn="★"
+            iconOff="○"
+          >
+            Cheat day
+          </ToggleButton>
+
+          {plan.settings.fatTrackingEnabled && (
+            <ToggleButton
+              pressed={log.fatOverGoal}
+              onPress={() => upsertDailyLog(today, { fatOverGoal: !log.fatOverGoal })}
+              pressedVariant="danger"
+              iconOn="!"
+              iconOff="○"
+            >
+              Fat over
+            </ToggleButton>
+          )}
+
+          {plan.settings.sugarTrackingEnabled && (
+            <ToggleButton
+              pressed={log.sugarOverGoal}
+              onPress={() => upsertDailyLog(today, { sugarOverGoal: !log.sugarOverGoal })}
+              pressedVariant="danger"
+              iconOn="!"
+              iconOff="○"
+            >
+              Sugar over
+            </ToggleButton>
+          )}
+
+          {(plan.settings.fatTrackingEnabled || plan.settings.sugarTrackingEnabled) && (
+            <ToggleButton
+              pressed={log.fatSugarCheat}
+              onPress={() => upsertDailyLog(today, { fatSugarCheat: !log.fatSugarCheat })}
+              pressedVariant="warning"
+              iconOn="★"
+              iconOff="○"
+            >
+              F/S cheat
+            </ToggleButton>
+          )}
+        </div>
+
+        <hr className="section-divider" />
+
+        <div className="exercise-today">
+          <div className="section-label-row">
+            <h2>Exercise</h2>
+            <ToggleButton
+              pressed={log.isRestDay}
+              onPress={() =>
+                upsertDailyLog(today, {
+                  isRestDay: !log.isRestDay,
+                  exerciseActivityIds: log.isRestDay ? log.exerciseActivityIds : [],
+                })
+              }
+              pressedVariant="warning"
+              iconOn="😴"
+              iconOff="○"
+              className="compact-toggle"
+            >
+              Rest day
+            </ToggleButton>
+          </div>
+
+          {!log.isRestDay && (
+            <div className="toggle-row">
+              {plan.exerciseActivities.length === 0 ? (
+                <p className="hint">
+                  <Link to="/activities">Add activities</Link> to log exercise.
+                </p>
+              ) : (
+                plan.exerciseActivities.map((a) => (
+                  <ToggleButton
+                    key={a.id}
+                    pressed={log.exerciseActivityIds.includes(a.id)}
+                    onPress={() => toggleActivity(a.id)}
+                    pressedVariant="good"
+                    iconOn="✓"
+                    iconOff="○"
+                  >
+                    {a.name}
+                    <span className="muted-inline">
+                      {' '}
+                      ({a.goalWeight === 'full' ? 'full' : '½'})
+                    </span>
+                  </ToggleButton>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="card">
-        <h2>This week</h2>
+      <section className="card progress-compact">
+        <h2>Progress</h2>
         <ProgressBar
-          label="Diet calories"
+          label="Diet · week"
           value={report.dietCalories.week.score}
           goalMet={report.dietCalories.week.goalMet}
         />
         <ProgressBar
-          label="Exercise"
+          label="Exercise · week"
           value={report.exercise.week.score}
           goalMet={report.exercise.week.goalMet}
         />
         <ProgressBar
-          label="De-stress"
-          value={report.destress.week.score}
-          goalMet={report.destress.week.goalMet}
-        />
-      </section>
-
-      <section className="card">
-        <h2>This month</h2>
-        <ProgressBar
-          label="Diet"
+          label="Diet · month"
           value={report.dietCalories.month.score}
           goalMet={report.dietCalories.month.goalMet}
         />
         <ProgressBar
-          label="Exercise"
+          label="Exercise · month"
           value={report.exercise.month.score}
           goalMet={report.exercise.month.goalMet}
-        />
-        <ProgressBar
-          label="De-stress"
-          value={report.destress.month.score}
-          goalMet={report.destress.month.goalMet}
         />
       </section>
     </div>

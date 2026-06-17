@@ -91,6 +91,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
           : {
               date,
               calories: 0,
+              calorieEntries: [],
               fat: 0,
               sugar: 0,
               isCheatDay: false,
@@ -124,6 +125,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       return {
         date: today,
         calories: 0,
+        calorieEntries: [],
         fat: 0,
         sugar: 0,
         isCheatDay: false,
@@ -139,6 +141,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       plan.dailyLogs.find((l) => l.date === today) ?? {
         date: today,
         calories: 0,
+        calorieEntries: [],
         fat: 0,
         sugar: 0,
         isCheatDay: false,

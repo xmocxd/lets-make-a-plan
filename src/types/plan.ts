@@ -43,6 +43,7 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export const DailyLogSchema = z.object({
   date: z.string(),
   calories: z.number().default(0),
+  calorieEntries: z.array(z.number()).default([]),
   fat: z.number().default(0),
   sugar: z.number().default(0),
   isCheatDay: z.boolean().default(false),

@@ -29,6 +29,22 @@ const activities: ExerciseActivity[] = [
   { id: '2', name: 'Gym', goalWeight: 'full' },
 ];
 
+const emptyLog = (date: string, patch: Partial<DailyLog> = {}): DailyLog => ({
+  date,
+  calories: 0,
+  calorieEntries: [],
+  fat: 0,
+  sugar: 0,
+  isCheatDay: false,
+  fatOverGoal: false,
+  sugarOverGoal: false,
+  fatSugarCheat: false,
+  destressDone: false,
+  isRestDay: false,
+  exerciseActivityIds: [],
+  ...patch,
+});
+
 describe('scoring', () => {
   it('classifies calorie status', () => {
     expect(getCalorieStatus(2000, 2000)).toBe('good');
@@ -38,19 +54,7 @@ describe('scoring', () => {
   });
 
   it('exercise half + half = full day', () => {
-    const log: DailyLog = {
-      date: '2026-06-16',
-      calories: 0,
-      fat: 0,
-      sugar: 0,
-      isCheatDay: false,
-      fatOverGoal: false,
-      sugarOverGoal: false,
-      fatSugarCheat: false,
-      destressDone: false,
-      isRestDay: false,
-      exerciseActivityIds: ['1', '1'],
-    };
+    const log = emptyLog('2026-06-16', { exerciseActivityIds: ['1', '1'] });
     expect(isExerciseDayGood(log, activities)).toBe(true);
   });
 
@@ -59,33 +63,9 @@ describe('scoring', () => {
     const logs: DailyLog[] = [];
     for (let i = 0; i < 6; i++) {
       const d = new Date(2026, 5, 15 + i);
-      logs.push({
-        date: d.toISOString().slice(0, 10),
-        calories: 0,
-        fat: 0,
-        sugar: 0,
-        isCheatDay: false,
-        fatOverGoal: false,
-        sugarOverGoal: false,
-        fatSugarCheat: false,
-        destressDone: false,
-        isRestDay: false,
-        exerciseActivityIds: ['2'],
-      });
+      logs.push(emptyLog(d.toISOString().slice(0, 10), { exerciseActivityIds: ['2'] }));
     }
-    logs.push({
-      date: '2026-06-21',
-      calories: 0,
-      fat: 0,
-      sugar: 0,
-      isCheatDay: false,
-      fatOverGoal: false,
-      sugarOverGoal: false,
-      fatSugarCheat: false,
-      destressDone: false,
-      isRestDay: true,
-      exerciseActivityIds: [],
-    });
+    logs.push(emptyLog('2026-06-21', { isRestDay: true }));
     const score = scoreExerciseWeek(logs, weekStart, activities, settings);
     expect(score.goalMet).toBe(true);
     expect(score.score).toBe(100);
@@ -94,19 +74,7 @@ describe('scoring', () => {
   it('scores diet week', () => {
     const weekStart = '2026-06-15';
     const logs: DailyLog[] = [
-      {
-        date: '2026-06-15',
-        calories: 2000,
-        fat: 0,
-        sugar: 0,
-        isCheatDay: false,
-        fatOverGoal: false,
-        sugarOverGoal: false,
-        fatSugarCheat: false,
-        destressDone: false,
-        isRestDay: false,
-        exerciseActivityIds: [],
-      },
+      emptyLog('2026-06-15', { calories: 2000, calorieEntries: [2000] }),
     ];
     const score = scoreDietWeek(logs, weekStart, settings);
     expect(score.good).toBeGreaterThanOrEqual(1);

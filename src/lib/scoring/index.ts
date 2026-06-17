@@ -1,10 +1,5 @@
-import type {
-  CalorieStatus,
-  DailyLog,
-  ExerciseActivity,
-  PlanData,
-  Settings,
-} from '../../types/plan';
+import type { CalorieStatus, DailyLog, ExerciseActivity, PlanData, Settings } from '../../types/plan';
+import { getCalorieTotal } from '../diet/calories';
 import {
   formatDate,
   getDaysInMonth,
@@ -22,21 +17,27 @@ export function getCalorieStatus(calories: number, target: number): CalorieStatu
 }
 
 export function getLogForDate(logs: DailyLog[], date: string): DailyLog {
-  return (
-    logs.find((l) => l.date === date) ?? {
-      date,
-      calories: 0,
-      fat: 0,
-      sugar: 0,
-      isCheatDay: false,
-      fatOverGoal: false,
-      sugarOverGoal: false,
-      fatSugarCheat: false,
-      destressDone: false,
-      isRestDay: false,
-      exerciseActivityIds: [],
-    }
-  );
+  const found = logs.find((l) => l.date === date);
+  if (found) {
+    return {
+      ...found,
+      calorieEntries: found.calorieEntries ?? (found.calories > 0 ? [found.calories] : []),
+    };
+  }
+  return {
+    date,
+    calories: 0,
+    calorieEntries: [],
+    fat: 0,
+    sugar: 0,
+    isCheatDay: false,
+    fatOverGoal: false,
+    sugarOverGoal: false,
+    fatSugarCheat: false,
+    destressDone: false,
+    isRestDay: false,
+    exerciseActivityIds: [],
+  };
 }
 
 export function exerciseDayWeight(
@@ -85,13 +86,14 @@ export function scoreDietWeek(
   for (const date of dates) {
     const log = getLogForDate(logs, date);
     if (log.isCheatDay) cheatDaysUsed++;
-    const status = getCalorieStatus(log.calories, settings.calorieTarget);
+    const dayCalories = getCalorieTotal(log);
+    const status = getCalorieStatus(dayCalories, settings.calorieTarget);
     if (status === 'good') good++;
     else if (status === 'yellow') yellow++;
     else if (status === 'bad') bad++;
 
-    if (!log.isCheatDay && log.calories > settings.calorieTarget) {
-      exceedTotal += ((log.calories - settings.calorieTarget) / settings.calorieTarget) * 100;
+    if (!log.isCheatDay && dayCalories > settings.calorieTarget) {
+      exceedTotal += ((dayCalories - settings.calorieTarget) / settings.calorieTarget) * 100;
       countedDays++;
     }
   }
@@ -154,7 +156,7 @@ export function scoreFatSugarMonth(
     if (fatOver || sugarOver) {
       if (!log.fatSugarCheat) overDays++;
       tracked++;
-    } else if (log.calories > 0 || log.destressDone || log.exerciseActivityIds.length) {
+    } else if (getCalorieTotal(log) > 0 || log.destressDone || log.exerciseActivityIds.length) {
       tracked++;
     }
   }

@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 import { usePlan } from '../context/PlanContext';
 import { formatDate } from '../lib/dates';
+import { ToggleButton } from '../components/ToggleButton';
 import type { DestressSuggestion } from '../types/plan';
 
 function pickSuggestion(items: DestressSuggestion[]): DestressSuggestion | null {
   if (!items.length) return null;
   const unseen = items.filter((i) => !i.lastShownAt);
   const pool = unseen.length ? unseen : items;
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  return pick;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 export function DestressPage() {
@@ -62,18 +62,20 @@ export function DestressPage() {
 
   return (
     <div className="page">
-      <h1>De-stress</h1>
+      <h1>Calm</h1>
+      <p className="subtitle">De-stress · {plan.settings.destressPerWeekGoal}× per week goal</p>
 
       <section className="card">
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={log.destressDone}
-            onChange={(e) => upsertDailyLog(today, { destressDone: e.target.checked })}
-          />
+        <ToggleButton
+          pressed={log.destressDone}
+          onPress={() => upsertDailyLog(today, { destressDone: !log.destressDone })}
+          pressedVariant="good"
+          iconOn="✓"
+          iconOff="○"
+          className="toggle-btn-block"
+        >
           Done a de-stress activity today
-        </label>
-        <p className="hint">Goal: {plan.settings.destressPerWeekGoal}× per week</p>
+        </ToggleButton>
       </section>
 
       <section className="card">

@@ -8,7 +8,8 @@ describe('csv serialize', () => {
     plan.meta.onboarded = true;
     plan.dailyLogs.push({
       date: '2026-06-16',
-      calories: 1800,
+      calories: 550,
+      calorieEntries: [350, 200],
       fat: 0,
       sugar: 0,
       isCheatDay: false,
@@ -23,6 +24,7 @@ describe('csv serialize', () => {
     const restored = deserializePlan(csv);
     expect(restored.meta.onboarded).toBe(true);
     expect(restored.dailyLogs).toHaveLength(1);
-    expect(restored.dailyLogs[0].calories).toBe(1800);
+    expect(restored.dailyLogs[0].calories).toBe(550);
+    expect(restored.dailyLogs[0].calorieEntries).toEqual([350, 200]);
   });
 });

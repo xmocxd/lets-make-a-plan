@@ -37,12 +37,18 @@ export function serializePlan(data: PlanData): string {
   }
 
   lines.push(SECTION('DailyLog'));
-  lines.push('date,calories,fat,sugar,isCheatDay,fatOverGoal,sugarOverGoal,fatSugarCheat,destressDone,isRestDay,exerciseActivityIds');
+  lines.push('date,calories,fat,sugar,isCheatDay,fatOverGoal,sugarOverGoal,fatSugarCheat,destressDone,isRestDay,exerciseActivityIds,calorieEntries');
   for (const log of data.dailyLogs) {
+    const entries = log.calorieEntries?.length
+      ? log.calorieEntries
+      : log.calories > 0
+        ? [log.calories]
+        : [];
     lines.push(row([
       log.date, log.calories, log.fat, log.sugar,
       log.isCheatDay, log.fatOverGoal, log.sugarOverGoal, log.fatSugarCheat,
       log.destressDone, log.isRestDay, log.exerciseActivityIds.join('|'),
+      entries.join('|'),
     ]));
   }
 
@@ -141,9 +147,18 @@ export function deserializePlan(csv: string): PlanData {
     } else if (line.startsWith('### DailyLog ###')) {
       const sec = parseSection(lines, i + 1);
       for (const r of sec.rows) {
+        const calorieEntries = r[11]
+          ? r[11].split('|').map(Number).filter((n) => !Number.isNaN(n) && n > 0)
+          : Number(r[1]) > 0
+            ? [Number(r[1])]
+            : [];
+        const calories = calorieEntries.length
+          ? calorieEntries.reduce((s, n) => s + n, 0)
+          : Number(r[1]) || 0;
         dailyLogs.push({
           date: r[0],
-          calories: Number(r[1]) || 0,
+          calories,
+          calorieEntries,
           fat: Number(r[2]) || 0,
           sugar: Number(r[3]) || 0,
           isCheatDay: r[4] === 'true',
