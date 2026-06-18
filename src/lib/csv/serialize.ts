@@ -52,6 +52,18 @@ export function serializePlan(data: PlanData): string {
     ]));
   }
 
+  lines.push(SECTION('WeekDayPlans'));
+  lines.push('date,isRestDay,isCheatDay,destressPlanned,exerciseActivityIds');
+  for (const p of data.weekDayPlans ?? []) {
+    lines.push(row([
+      p.date,
+      p.isRestDay,
+      p.isCheatDay,
+      p.destressPlanned,
+      p.exerciseActivityIds.join('|'),
+    ]));
+  }
+
   lines.push(SECTION('ExerciseActivities'));
   lines.push('id,name,goalWeight');
   for (const a of data.exerciseActivities) {
@@ -130,6 +142,7 @@ export function deserializePlan(csv: string): PlanData {
   const metaKv: Record<string, string> = {};
   const settingsKv: Record<string, string> = {};
   const dailyLogs: PlanData['dailyLogs'] = [];
+  const weekDayPlans: PlanData['weekDayPlans'] = [];
   const exerciseActivities: PlanData['exerciseActivities'] = [];
   const destressSuggestions: PlanData['destressSuggestions'] = [];
   const mantras: PlanData['mantras'] = [];
@@ -175,6 +188,18 @@ export function deserializePlan(csv: string): PlanData {
           exerciseActivityIds: r[col('exerciseActivityIds', hasLegacyFatSugarCheat ? 10 : 9)]
             ? r[col('exerciseActivityIds', hasLegacyFatSugarCheat ? 10 : 9)].split('|').filter(Boolean)
             : [],
+        });
+      }
+      i = sec.end;
+    } else if (line.startsWith('### WeekDayPlans ###')) {
+      const sec = parseSection(lines, i + 1);
+      for (const r of sec.rows) {
+        weekDayPlans.push({
+          date: r[0],
+          isRestDay: r[1] === 'true',
+          isCheatDay: r[2] === 'true',
+          destressPlanned: r[3] === 'true',
+          exerciseActivityIds: r[4] ? r[4].split('|').filter(Boolean) : [],
         });
       }
       i = sec.end;
@@ -241,11 +266,12 @@ export function deserializePlan(csv: string): PlanData {
       fatSugarExceedPctMax: num(settingsKv.fatSugarExceedPctMax, 20),
       restDaysPerWeek: num(settingsKv.restDaysPerWeek, 1),
       exerciseMonthGoalPct: num(settingsKv.exerciseMonthGoalPct, 90),
-      destressPerWeekGoal: num(settingsKv.destressPerWeekGoal, 3),
+      destressPerWeekGoal: num(settingsKv.destressPerWeekGoal, 2),
       autoBackupEnabled: settingsKv.autoBackupEnabled !== 'false',
       driveBackupEnabled: settingsKv.driveBackupEnabled !== 'false',
     },
     dailyLogs,
+    weekDayPlans,
     exerciseActivities,
     destressSuggestions,
     mantras,

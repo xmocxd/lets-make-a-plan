@@ -14,6 +14,21 @@ export function getWeekStart(dateStr: string): string {
   return formatDate(d);
 }
 
+/** Monday of the ISO-style week containing `dateStr` (Mon–Sun). */
+export function getMondayWeekStart(dateStr: string): string {
+  const d = parseDate(dateStr);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return formatDate(d);
+}
+
+export function addDays(dateStr: string, delta: number): string {
+  const d = parseDate(dateStr);
+  d.setDate(d.getDate() + delta);
+  return formatDate(d);
+}
+
 export function getWeekDates(weekStart: string): string[] {
   const start = parseDate(weekStart);
   return Array.from({ length: 7 }, (_, i) => {
@@ -57,4 +72,18 @@ export function getMonthsBack(count: number, from: Date = new Date()): string[] 
     months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }
   return months;
+}
+
+export function getMondayWeekStartsInMonth(monthKey: string): string[] {
+  const days = getDaysInMonth(monthKey);
+  const starts = new Set(days.map((d) => getMondayWeekStart(d)));
+  return [...starts].sort();
+}
+
+export function formatMonthLabel(monthKey: string): string {
+  const [y, m] = monthKey.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString(undefined, {
+    month: 'short',
+    year: 'numeric',
+  });
 }

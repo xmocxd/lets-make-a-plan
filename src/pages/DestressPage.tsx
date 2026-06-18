@@ -1,29 +1,26 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { usePlan } from '../context/PlanContext';
 import { formatDate } from '../lib/dates';
+import { shuffleArray } from '../lib/shuffle';
 import { ToggleButton } from '../components/ToggleButton';
 import { ProgressBar } from '../components/ProgressBar';
-import type { DestressSuggestion } from '../types/plan';
-
-function pickSuggestion(items: DestressSuggestion[]): DestressSuggestion | null {
-  if (!items.length) return null;
-  const unseen = items.filter((i) => !i.lastShownAt);
-  const pool = unseen.length ? unseen : items;
-  return pool[Math.floor(Math.random() * pool.length)];
-}
+import { DestressSuggestionScroller } from '../components/DestressSuggestionScroller';
 
 export function DestressPage() {
-  const { plan, report, getTodayLog, upsertDailyLog, setPlan } = usePlan();
-  const [suggestion, setSuggestion] = useState<DestressSuggestion | null>(null);
+  const { plan, report, getTodayLog, upsertDailyLog } = usePlan();
+  const location = useLocation();
+  const [shuffleKey, setShuffleKey] = useState(0);
 
-  const items = plan?.destressSuggestions ?? [];
+  const displayItems = useMemo(() => {
+    if (!plan) return [];
+    return shuffleArray(plan.destressSuggestions);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reshuffle on navigate / Shuffle tap
+  }, [plan, location.key, shuffleKey]);
 
-  useEffect(() => {
-    if (items.length) {
-      setSuggestion((prev) => prev ?? pickSuggestion(items));
-    }
-  }, [items]);
+  const shuffle = useCallback(() => {
+    setShuffleKey((k) => k + 1);
+  }, []);
 
   if (!plan) return null;
 
@@ -33,28 +30,9 @@ export function DestressPage() {
   const weekCount = report?.destress.week.count ?? 0;
   const weekGoalMet = report?.destress.week.goalMet ?? false;
 
-  const shuffle = async () => {
-    const pick = pickSuggestion(items);
-    if (!pick) return;
-    setSuggestion(pick);
-    const updated = plan.destressSuggestions.map((s) =>
-      s.id === pick.id ? { ...s, lastShownAt: new Date().toISOString() } : s,
-    );
-    const allShown = updated.every((s) => s.lastShownAt);
-    if (allShown) {
-      await setPlan({
-        ...plan,
-        destressSuggestions: updated.map((s) => ({ ...s, lastShownAt: undefined })),
-      });
-    } else {
-      await setPlan({ ...plan, destressSuggestions: updated });
-    }
-  };
-
   return (
     <div className="page">
       <h1>Calm</h1>
-      <p className="subtitle">De-stress · {weekGoal}× per week goal</p>
 
       <section className="card">
         <ProgressBar
@@ -81,17 +59,22 @@ export function DestressPage() {
         </ToggleButton>
       </section>
 
-      <section className="card">
+      <section className="card destress-ideas-card">
         <div className="section-header-row">
-          <h2>Suggestion</h2>
+          <h2>De-stress Ideas</h2>
           <Link to="/destress/list" className="btn-text header-link">
-            Your list
+            Edit list
           </Link>
         </div>
-        {suggestion && <p className="suggestion-text">{suggestion.text}</p>}
-        <button type="button" className="btn secondary" onClick={shuffle}>
-          Shuffle idea
-        </button>
+        <DestressSuggestionScroller
+          key={displayItems.map((i) => i.id).join(',')}
+          items={displayItems}
+        />
+        {displayItems.length > 1 && (
+          <button type="button" className="btn secondary destress-shuffle-btn" onClick={shuffle}>
+            Shuffle
+          </button>
+        )}
       </section>
     </div>
   );

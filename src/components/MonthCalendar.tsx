@@ -1,14 +1,7 @@
 import { useMemo } from 'react';
 import type { PlanData } from '../types/plan';
 import { getDaysInMonth, parseDate } from '../lib/dates';
-import {
-  getLogForDate,
-  getDietDayStatus,
-  getExerciseDayStatus,
-  getDestressDayStatus,
-  getFatDayStatus,
-  getSugarDayStatus,
-} from '../lib/scoring';
+import { DayStatusIcons } from './DayStatusIcons';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -25,28 +18,14 @@ export function MonthCalendar({ plan, monthKey }: MonthCalendarProps) {
     const days = getDaysInMonth(monthKey);
     const firstDow = parseDate(days[0]).getDay();
     const blanks = Array.from({ length: firstDow }, (_, i) => ({ type: 'blank' as const, key: `b${i}` }));
-    const dayCells = days.map((date) => {
-      const log = getLogForDate(plan.dailyLogs, date);
-      return {
-        type: 'day' as const,
-        key: date,
-        date,
-        dayNum: parseDate(date).getDate(),
-        isCheatDay: log.isCheatDay,
-        isRestDay: log.isRestDay,
-        diet: getDietDayStatus(
-          log,
-          plan.settings.calorieTarget,
-          plan.settings.dietCalorieExceedPctMax,
-        ),
-        fat: getFatDayStatus(log),
-        sugar: getSugarDayStatus(log),
-        exercise: getExerciseDayStatus(log, plan.exerciseActivities),
-        destress: getDestressDayStatus(log),
-      };
-    });
+    const dayCells = days.map((date) => ({
+      type: 'day' as const,
+      key: date,
+      date,
+      dayNum: parseDate(date).getDate(),
+    }));
     return [...blanks, ...dayCells];
-  }, [plan, monthKey]);
+  }, [monthKey]);
 
   return (
     <div className="month-calendar">
@@ -64,67 +43,7 @@ export function MonthCalendar({ plan, monthKey }: MonthCalendarProps) {
           ) : (
             <div key={cell.key} className="calendar-cell" title={cell.date}>
               <span className="calendar-day-num">{cell.dayNum}</span>
-              <div className="calendar-squares">
-                {cell.isCheatDay ? (
-                  <span className="cal-badge cheat" title="Cheat day" aria-label="Cheat day">
-                    cheat
-                  </span>
-                ) : (
-                  <>
-                    {cell.diet !== 'unset' && (
-                      <span
-                        className={`cal-square diet ${cell.diet}`}
-                        title={`Diet: ${cell.diet}`}
-                        aria-label={`Diet ${cell.diet}`}
-                      >
-                        D
-                      </span>
-                    )}
-                    {trackFat && cell.fat === 'bad' && (
-                      <span
-                        className="cal-square fat bad"
-                        title="Fat over"
-                        aria-label="Fat over"
-                      >
-                        F
-                      </span>
-                    )}
-                    {trackSugar && cell.sugar === 'bad' && (
-                      <span
-                        className="cal-square sugar bad"
-                        title="Sugar over"
-                        aria-label="Sugar over"
-                      >
-                        S
-                      </span>
-                    )}
-                  </>
-                )}
-                {cell.isRestDay ? (
-                  <span className="cal-badge rest" title="Rest day" aria-label="Rest day">
-                    rest
-                  </span>
-                ) : (
-                  cell.exercise !== 'bad' && (
-                    <span
-                      className={`cal-square exercise ${cell.exercise}`}
-                      title={`Exercise: ${cell.exercise}`}
-                      aria-label={`Exercise ${cell.exercise}`}
-                    >
-                      E
-                    </span>
-                  )
-                )}
-                {cell.destress === 'good' && (
-                  <span
-                    className="cal-square destress good"
-                    title="Calm: done"
-                    aria-label="Calm done"
-                  >
-                    C
-                  </span>
-                )}
-              </div>
+              <DayStatusIcons plan={plan} date={cell.date} />
             </div>
           ),
         )}

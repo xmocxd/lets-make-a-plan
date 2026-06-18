@@ -3,10 +3,11 @@ import { PlanProvider, usePlan } from './context/PlanContext';
 import { NavBar } from './components/NavBar';
 import { BackupBanner } from './components/BackupBanner';
 import { HomePage } from './pages/HomePage';
+import { PlanPage } from './pages/PlanPage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
 import { DestressPage } from './pages/DestressPage';
 import { DestressListPage } from './pages/DestressListPage';
-import { ReportPage } from './pages/ReportPage';
+import { ReportPage, ReportDetailPage } from './pages/ReportPage';
 import { MantrasPage } from './pages/MantrasPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { OnboardingPage } from './pages/OnboardingPage';
@@ -37,10 +38,12 @@ function AppRoutes() {
       <div className="app-body">
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/plan" element={<PlanPage />} />
           <Route path="/activities" element={<ActivitiesPage />} />
           <Route path="/destress" element={<DestressPage />} />
           <Route path="/destress/list" element={<DestressListPage />} />
           <Route path="/report" element={<ReportPage />} />
+          <Route path="/report/detail" element={<ReportDetailPage />} />
           <Route path="/mantras" element={<MantrasPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/diet" element={<Navigate to="/" replace />} />

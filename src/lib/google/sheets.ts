@@ -3,7 +3,7 @@ import type { PlanData } from '../../types/plan';
 import { SCHEMA_VERSION } from '../../types/plan';
 import { getAccessToken } from './auth';
 
-const TAB_NAMES = ['Meta', 'Settings', 'DailyLog', 'ExerciseActivities', 'DestressSuggestions', 'Mantras'];
+const TAB_NAMES = ['Meta', 'Settings', 'DailyLog', 'WeekDayPlans', 'ExerciseActivities', 'DestressSuggestions', 'Mantras'];
 
 export async function createPlanSpreadsheet(title: string): Promise<string> {
   const token = getAccessToken();

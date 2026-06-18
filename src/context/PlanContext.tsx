@@ -7,9 +7,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { PlanData, DailyLog, Settings } from '../types/plan';
+import type { PlanData, DailyLog, Settings, DayPlan } from '../types/plan';
 import { formatDate } from '../lib/dates';
-import { loadPlan, savePlan, initPlan } from '../lib/csv/store';
+import { loadPlan, savePlan } from '../lib/csv/store';
 import { getReportCard } from '../lib/scoring';
 import { runBackupIfDue, runBackup } from '../lib/backup';
 import { scheduleSyncPush, startNewPlan } from '../lib/sync/engine';
@@ -23,6 +23,7 @@ interface PlanContextValue {
   setPlan: (p: PlanData) => Promise<void>;
   refresh: () => Promise<void>;
   upsertDailyLog: (date: string, patch: Partial<DailyLog>) => Promise<void>;
+  upsertDayPlan: (date: string, patch: Partial<DayPlan>) => Promise<void>;
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
   getTodayLog: () => DailyLog;
   report: ReturnType<typeof getReportCard> | null;
@@ -111,6 +112,29 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     [plan, setPlan],
   );
 
+  const upsertDayPlan = useCallback(
+    async (date: string, patch: Partial<DayPlan>) => {
+      if (!plan) return;
+      const idx = plan.weekDayPlans.findIndex((p) => p.date === date);
+      const base =
+        idx >= 0
+          ? plan.weekDayPlans[idx]
+          : {
+              date,
+              exerciseActivityIds: [],
+              isRestDay: false,
+              isCheatDay: false,
+              destressPlanned: false,
+            };
+      const updated = { ...base, ...patch, date };
+      const weekDayPlans = [...plan.weekDayPlans];
+      if (idx >= 0) weekDayPlans[idx] = updated;
+      else weekDayPlans.push(updated);
+      await setPlan({ ...plan, weekDayPlans });
+    },
+    [plan, setPlan],
+  );
+
   const updateSettings = useCallback(
     async (patch: Partial<Settings>) => {
       if (!plan) return;
@@ -192,6 +216,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     setPlan,
     refresh,
     upsertDailyLog,
+    upsertDayPlan,
     updateSettings,
     getTodayLog,
     report,
@@ -203,10 +228,11 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;
 }
 
+// Hook export alongside provider — standard pattern for context modules.
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePlan() {
   const ctx = useContext(PlanContext);
   if (!ctx) throw new Error('usePlan must be used within PlanProvider');
   return ctx;
 }
 
-export { initPlan };

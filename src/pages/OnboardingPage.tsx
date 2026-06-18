@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePlan, initPlan } from '../context/PlanContext';
+import { usePlan } from '../context/PlanContext';
+import { initPlan } from '../lib/csv/store';
 import {
   isGoogleConfigured,
   requestAccessToken,

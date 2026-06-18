@@ -33,7 +33,7 @@ export const SettingsSchema = z.object({
   fatSugarExceedPctMax: z.number().default(20),
   restDaysPerWeek: z.number().default(1),
   exerciseMonthGoalPct: z.number().default(90),
-  destressPerWeekGoal: z.number().default(3),
+  destressPerWeekGoal: z.number().default(2),
   autoBackupEnabled: z.boolean().default(true),
   driveBackupEnabled: z.boolean().default(true),
 });
@@ -76,10 +76,20 @@ export const MantraSchema = z.object({
 });
 export type Mantra = z.infer<typeof MantraSchema>;
 
+export const DayPlanSchema = z.object({
+  date: z.string(),
+  exerciseActivityIds: z.array(z.string()).default([]),
+  isRestDay: z.boolean().default(false),
+  isCheatDay: z.boolean().default(false),
+  destressPlanned: z.boolean().default(false),
+});
+export type DayPlan = z.infer<typeof DayPlanSchema>;
+
 export const PlanDataSchema = z.object({
   meta: MetaSchema,
   settings: SettingsSchema,
   dailyLogs: z.array(DailyLogSchema),
+  weekDayPlans: z.array(DayPlanSchema).default([]),
   exerciseActivities: z.array(ExerciseActivitySchema),
   destressSuggestions: z.array(DestressSuggestionSchema),
   mantras: z.array(MantraSchema),
@@ -138,6 +148,7 @@ export function createDefaultPlan(): PlanData {
     },
     settings: SettingsSchema.parse({}),
     dailyLogs: [],
+    weekDayPlans: [],
     exerciseActivities: DEFAULT_EXERCISE_ACTIVITIES.map((a) => ({ ...a })),
     destressSuggestions: DEFAULT_DESTRESS.map((d) => ({ ...d })),
     mantras: DEFAULT_MANTRAS.map((m) => ({ ...m })),

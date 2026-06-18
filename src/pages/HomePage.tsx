@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePlan } from '../context/PlanContext';
-import { getCalorieStatus, isExerciseDayGood } from '../lib/scoring';
-import { formatDate } from '../lib/dates';
+import { getCalorieStatus, getLogForDate, isExerciseDayGood } from '../lib/scoring';
+import { addDays, formatDate, parseDate } from '../lib/dates';
 import { getCalorieTotal, normalizeDailyCalories, sumCalorieEntries } from '../lib/diet/calories';
 import { CalorieRing } from '../components/CalorieRing';
 import { ToggleButton } from '../components/ToggleButton';
-import { ProgressBar } from '../components/ProgressBar';
+import { WeekProgressChart } from '../components/WeekProgressChart';
 import type { Mantra } from '../types/plan';
 
 function pickMantra(mantras: Mantra[]): Mantra | null {
@@ -19,13 +19,27 @@ function pickMantra(mantras: Mantra[]): Mantra | null {
   return sorted[0];
 }
 
+function formatDisplayDate(dateStr: string): string {
+  return parseDate(dateStr).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export function HomePage() {
-  const { plan, report, getTodayLog, upsertDailyLog, setPlan } = usePlan();
+  const { plan, getTodayLog, upsertDailyLog, setPlan } = usePlan();
   const navigate = useNavigate();
   const [entryInput, setEntryInput] = useState('');
 
   const today = formatDate();
-  const rawLog = getTodayLog();
+  const [selectedDate, setSelectedDate] = useState(today);
+
+  const rawLog = useMemo(() => {
+    if (!plan) return getTodayLog();
+    return getLogForDate(plan.dailyLogs, selectedDate);
+  }, [plan, selectedDate, getTodayLog]);
+
   const log = normalizeDailyCalories(rawLog);
 
   const mantra = useMemo(() => {
@@ -33,7 +47,7 @@ export function HomePage() {
     return pickMantra(plan.mantras);
   }, [plan]);
 
-  if (!plan || !report) return null;
+  if (!plan) return null;
 
   const target = plan.settings.calorieTarget;
   const total = getCalorieTotal(log);
@@ -51,7 +65,7 @@ export function HomePage() {
   };
 
   const saveEntries = (next: number[]) => {
-    upsertDailyLog(today, {
+    upsertDailyLog(selectedDate, {
       calorieEntries: next,
       calories: sumCalorieEntries(next),
     });
@@ -72,10 +86,11 @@ export function HomePage() {
     const ids = log.exerciseActivityIds.includes(id)
       ? log.exerciseActivityIds.filter((x) => x !== id)
       : [...log.exerciseActivityIds, id];
-    upsertDailyLog(today, { exerciseActivityIds: ids, isRestDay: false });
+    upsertDailyLog(selectedDate, { exerciseActivityIds: ids, isRestDay: false });
   };
 
   const exerciseStatus = log.isRestDay ? 'warning' : exGood ? 'good' : 'default';
+  const isToday = selectedDate === today;
 
   return (
     <div className="page">
@@ -87,12 +102,34 @@ export function HomePage() {
 
       <div className="page-header-row">
         <div>
-          <h1>Today</h1>
-          <p className="subtitle">{today}</p>
+          <h1>Log</h1>
+          <div className="day-nav">
+            <button
+              type="button"
+              className="day-nav-btn"
+              onClick={() => setSelectedDate(addDays(selectedDate, -1))}
+              aria-label="Previous day"
+            >
+              ←
+            </button>
+            <p className="subtitle">
+              {isToday ? 'Today' : formatDisplayDate(selectedDate)}
+              {!isToday && <span className="day-nav-date">{selectedDate}</span>}
+            </p>
+            <button
+              type="button"
+              className="day-nav-btn"
+              disabled={isToday}
+              onClick={() => {
+                const next = addDays(selectedDate, 1);
+                if (next <= today) setSelectedDate(next);
+              }}
+              aria-label="Next day"
+            >
+              →
+            </button>
+          </div>
         </div>
-        <Link to="/activities" className="btn-text header-link">
-          Activities →
-        </Link>
       </div>
 
       <section className="card today-unified">
@@ -103,6 +140,9 @@ export function HomePage() {
           <span className={`status-pill ${exerciseStatus}`}>
             {log.isRestDay ? 'Rest' : exGood ? 'Exercise ✓' : 'Exercise'}
           </span>
+          {log.destressDone && (
+            <span className="status-pill good">Calm ✓</span>
+          )}
         </div>
 
         <div className="calorie-row">
@@ -165,7 +205,7 @@ export function HomePage() {
         <div className="toggle-row">
           <ToggleButton
             pressed={log.isCheatDay}
-            onPress={() => upsertDailyLog(today, { isCheatDay: !log.isCheatDay })}
+            onPress={() => upsertDailyLog(selectedDate, { isCheatDay: !log.isCheatDay })}
             pressedVariant="warning"
             iconOn="★"
             iconOff="○"
@@ -176,7 +216,7 @@ export function HomePage() {
           {plan.settings.fatTrackingEnabled && (
             <ToggleButton
               pressed={log.fatOverGoal}
-              onPress={() => upsertDailyLog(today, { fatOverGoal: !log.fatOverGoal })}
+              onPress={() => upsertDailyLog(selectedDate, { fatOverGoal: !log.fatOverGoal })}
               pressedVariant="danger"
               iconOn="!"
               iconOff="○"
@@ -188,7 +228,7 @@ export function HomePage() {
           {plan.settings.sugarTrackingEnabled && (
             <ToggleButton
               pressed={log.sugarOverGoal}
-              onPress={() => upsertDailyLog(today, { sugarOverGoal: !log.sugarOverGoal })}
+              onPress={() => upsertDailyLog(selectedDate, { sugarOverGoal: !log.sugarOverGoal })}
               pressedVariant="danger"
               iconOn="!"
               iconOff="○"
@@ -203,11 +243,16 @@ export function HomePage() {
 
         <div className="exercise-today">
           <div className="section-label-row">
-            <h2>Exercise</h2>
+            <h2 className="section-title-with-action">
+              Exercise
+              <Link to="/activities" className="section-title-icon" aria-label="Edit activities">
+                ✏️
+              </Link>
+            </h2>
             <ToggleButton
               pressed={log.isRestDay}
               onPress={() =>
-                upsertDailyLog(today, {
+                upsertDailyLog(selectedDate, {
                   isRestDay: !log.isRestDay,
                   exerciseActivityIds: log.isRestDay ? log.exerciseActivityIds : [],
                 })
@@ -224,9 +269,7 @@ export function HomePage() {
           {!log.isRestDay && (
             <div className="toggle-row">
               {plan.exerciseActivities.length === 0 ? (
-                <p className="hint">
-                  <Link to="/activities">Add activities</Link> to log exercise.
-                </p>
+                <p className="hint">Add activities to log exercise.</p>
               ) : (
                 plan.exerciseActivities.map((a) => (
                   <ToggleButton
@@ -248,31 +291,31 @@ export function HomePage() {
             </div>
           )}
         </div>
+
+        <hr className="section-divider" />
+
+        <div className="calm-today">
+          <h2>Calm</h2>
+          <ToggleButton
+            pressed={log.destressDone}
+            onPress={() => upsertDailyLog(selectedDate, { destressDone: !log.destressDone })}
+            pressedVariant="good"
+            iconOn="✓"
+            iconOff="○"
+          >
+            De-stress
+          </ToggleButton>
+        </div>
       </section>
 
-      <section className="card progress-compact">
-        <h2>Progress</h2>
-        <ProgressBar
-          label="Diet · week"
-          value={report.dietCalories.week.score}
-          goalMet={report.dietCalories.week.goalMet}
-        />
-        <ProgressBar
-          label="Exercise · week"
-          value={report.exercise.week.score}
-          goalMet={report.exercise.week.goalMet}
-        />
-        <ProgressBar
-          label="Diet · month"
-          value={report.dietCalories.month.score}
-          goalMet={report.dietCalories.month.goalMet}
-        />
-        <ProgressBar
-          label="Exercise · month"
-          value={report.exercise.month.score}
-          goalMet={report.exercise.month.goalMet}
-        />
-      </section>
+      <WeekProgressChart
+        plan={plan}
+        referenceDate={selectedDate}
+        selectedDate={selectedDate}
+        onSelectDate={(date) => {
+          if (date <= today) setSelectedDate(date);
+        }}
+      />
     </div>
   );
 }
