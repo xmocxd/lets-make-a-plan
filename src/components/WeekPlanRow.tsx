@@ -38,7 +38,7 @@ export function WeekPlanRow({ plan, dates }: WeekPlanRowProps) {
                     <button
                       key={label.id}
                       type="button"
-                      className={`plan-label ${label.kind}`}
+                      className={`plan-label ${label.kind}${label.exerciseWeight ? ` ${label.exerciseWeight}` : ''}`}
                       onClick={() => setExpanded(label.text)}
                       title={label.text}
                     >

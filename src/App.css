@@ -1421,8 +1421,12 @@
   cursor: default;
 }
 
-.plan-label.exercise {
-  background: #2a4a7a;
+.plan-label.exercise.full {
+  background: #1e4080;
+}
+
+.plan-label.exercise.half {
+  background: #64748b;
 }
 
 .plan-label.calm {

@@ -1,4 +1,4 @@
-import type { DailyLog, DayPlan, ExerciseActivity, PlanData, Settings } from '../types/plan';
+import type { DailyLog, DayPlan, ExerciseActivity, GoalWeight, PlanData, Settings } from '../types/plan';
 import { getMondayWeekStart, getWeekDates } from './dates';
 import { scoreCalmComponentWeek, scoreExerciseComponentWeek, WEEK_SCORE_WEIGHTS } from './scoring';
 
@@ -61,6 +61,7 @@ export interface PlanDayLabel {
   id: string;
   text: string;
   kind: 'exercise' | 'calm' | 'cheat' | 'rest';
+  exerciseWeight?: GoalWeight;
 }
 
 export function getPlanLabelsForDate(
@@ -86,6 +87,7 @@ export function getPlanLabelsForDate(
         id: `${date}-ex-${activityId}`,
         text: activity.name,
         kind: 'exercise',
+        exerciseWeight: activity.goalWeight,
       });
     }
   }
