@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type { PlanData, DailyLog, Settings, DayPlan } from '../types/plan';
 import { formatDate } from '../lib/dates';
+import { emptyDailyLog, emptyDayPlan } from '../lib/defaults';
 import { loadPlan, savePlan } from '../lib/csv/store';
 import { getReportCard } from '../lib/scoring';
 import { runBackupIfDue, runBackup } from '../lib/backup';
@@ -90,19 +91,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       const base =
         idx >= 0
           ? plan.dailyLogs[idx]
-          : {
-              date,
-              calories: 0,
-              calorieEntries: [],
-              fat: 0,
-              sugar: 0,
-              isCheatDay: false,
-              fatOverGoal: false,
-              sugarOverGoal: false,
-              destressDone: false,
-              isRestDay: false,
-              exerciseActivityIds: [],
-            };
+          : emptyDailyLog(date);
       const updated = { ...base, ...patch, date };
       const logs = [...plan.dailyLogs];
       if (idx >= 0) logs[idx] = updated;
@@ -116,16 +105,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     async (date: string, patch: Partial<DayPlan>) => {
       if (!plan) return;
       const idx = plan.weekDayPlans.findIndex((p) => p.date === date);
-      const base =
-        idx >= 0
-          ? plan.weekDayPlans[idx]
-          : {
-              date,
-              exerciseActivityIds: [],
-              isRestDay: false,
-              isCheatDay: false,
-              destressPlanned: false,
-            };
+      const base = idx >= 0 ? plan.weekDayPlans[idx] : emptyDayPlan(date);
       const updated = { ...base, ...patch, date };
       const weekDayPlans = [...plan.weekDayPlans];
       if (idx >= 0) weekDayPlans[idx] = updated;
@@ -145,36 +125,8 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
   const getTodayLog = useCallback((): DailyLog => {
     const today = formatDate();
-    if (!plan) {
-      return {
-        date: today,
-        calories: 0,
-        calorieEntries: [],
-        fat: 0,
-        sugar: 0,
-        isCheatDay: false,
-        fatOverGoal: false,
-        sugarOverGoal: false,
-        destressDone: false,
-        isRestDay: false,
-        exerciseActivityIds: [],
-      };
-    }
-    return (
-      plan.dailyLogs.find((l) => l.date === today) ?? {
-        date: today,
-        calories: 0,
-        calorieEntries: [],
-        fat: 0,
-        sugar: 0,
-        isCheatDay: false,
-        fatOverGoal: false,
-        sugarOverGoal: false,
-        destressDone: false,
-        isRestDay: false,
-        exerciseActivityIds: [],
-      }
-    );
+    if (!plan) return emptyDailyLog(today);
+    return plan.dailyLogs.find((l) => l.date === today) ?? emptyDailyLog(today);
   }, [plan]);
 
   const report = useMemo(

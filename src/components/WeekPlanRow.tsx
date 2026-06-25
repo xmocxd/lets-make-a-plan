@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import type { PlanData } from '../types/plan';
+import { WEEKDAY_LABELS } from '../lib/constants';
 import { parseDate } from '../lib/dates';
 import { getPlanLabelsForDate } from '../lib/weekPlan';
 import { LabelModal } from './LabelModal';
-
-const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 interface WeekPlanRowProps {
   plan: PlanData;

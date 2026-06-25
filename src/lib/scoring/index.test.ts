@@ -145,11 +145,12 @@ describe('scoring', () => {
     expect(summary.exercise.full).toBe(2);
   });
 
-  it('hides week grade until Sunday is logged', () => {
+  it('hides week grade until week ends', () => {
     const logs = [emptyLog('2026-06-15', { calories: 2000, calorieEntries: [2000] })];
-    expect(isWeekComplete(logs, '2026-06-17')).toBe(false);
+    expect(isWeekComplete(logs, '2026-06-17', '2026-06-17')).toBe(false);
+    expect(isWeekComplete(logs, '2026-06-17', '2026-06-22')).toBe(true);
     logs.push(emptyLog('2026-06-21', { calories: 2000, calorieEntries: [2000] }));
-    expect(isWeekComplete(logs, '2026-06-17')).toBe(true);
+    expect(isWeekComplete(logs, '2026-06-17', '2026-06-21')).toBe(true);
   });
 
   it('assigns letter grades', () => {

@@ -1,4 +1,5 @@
 import type { PlanData } from '../types/plan';
+import { formatDate } from '../lib/dates';
 import {
   getDietDayStatus,
   getExerciseDayStatus,
@@ -6,25 +7,37 @@ import {
   getFatDayStatus,
   getSugarDayStatus,
   getLogForDate,
+  hasAnyDayEntry,
 } from '../lib/scoring';
 
 interface DayStatusIconsProps {
   plan: PlanData;
   date: string;
+  asOfDate?: string;
 }
 
-export function DayStatusIcons({ plan, date }: DayStatusIconsProps) {
+export function DayStatusIcons({ plan, date, asOfDate = formatDate() }: DayStatusIconsProps) {
   const trackFat = plan.settings.fatTrackingEnabled;
   const trackSugar = plan.settings.sugarTrackingEnabled;
   const log = getLogForDate(plan.dailyLogs, date);
-  const diet = getDietDayStatus(
-    log,
-    plan.settings.calorieTarget,
-    plan.settings.dietCalorieExceedPctMax,
-  );
+  const isFuture = date > asOfDate;
+  const isTodayEmpty = date === asOfDate && !hasAnyDayEntry(log);
+  const isPastEmpty = date < asOfDate && !hasAnyDayEntry(log);
+
+  if (isFuture || isTodayEmpty) {
+    return <div className="calendar-squares" />;
+  }
+
+  const diet = isPastEmpty
+    ? 'bad'
+    : getDietDayStatus(
+        log,
+        plan.settings.calorieTarget,
+        plan.settings.dietCalorieExceedPctMax,
+      );
   const fat = getFatDayStatus(log);
   const sugar = getSugarDayStatus(log);
-  const exercise = getExerciseDayStatus(log, plan.exerciseActivities);
+  const exercise = isPastEmpty ? 'bad' : getExerciseDayStatus(log, plan.exerciseActivities);
   const destress = getDestressDayStatus(log);
 
   return (
@@ -35,7 +48,7 @@ export function DayStatusIcons({ plan, date }: DayStatusIconsProps) {
         </span>
       ) : (
         <>
-          {diet !== 'unset' && (
+          {diet !== 'unset' && diet !== 'none' && (
             <span
               className={`cal-square diet ${diet}`}
               title={`Diet: ${diet}`}
@@ -61,7 +74,7 @@ export function DayStatusIcons({ plan, date }: DayStatusIconsProps) {
           rest
         </span>
       ) : (
-        exercise !== 'bad' && (
+        exercise !== 'none' && (
           <span
             className={`cal-square exercise ${exercise}`}
             title={`Exercise: ${exercise}`}

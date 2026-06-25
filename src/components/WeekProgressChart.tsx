@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { PlanData } from '../types/plan';
+import { WEEKDAY_LABELS } from '../lib/constants';
 import { formatDate, parseDate } from '../lib/dates';
 import {
   getCombinedWeekScore,
@@ -7,74 +8,14 @@ import {
   getWeekSummary,
   isWeekComplete,
 } from '../lib/scoring';
+import { CalmRing, StackedRing } from './WeekMetricRings';
 import { DayStatusIcons } from './DayStatusIcons';
 import { WeekPlanRow } from './WeekPlanRow';
 
-const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const DAYS_IN_WEEK = 7;
-
 interface WeekProgressChartProps {
   plan: PlanData;
-  referenceDate: string;
   selectedDate: string;
   onSelectDate: (date: string) => void;
-}
-
-function StackedRing({
-  label,
-  scoreLabel,
-  segments,
-}: {
-  label: string;
-  scoreLabel: string;
-  segments: { value: number; color: string }[];
-}) {
-  let cursor = 0;
-  const stops: string[] = [];
-  for (const seg of segments) {
-    if (seg.value <= 0) continue;
-    const start = (cursor / DAYS_IN_WEEK) * 360;
-    cursor += seg.value;
-    const end = (cursor / DAYS_IN_WEEK) * 360;
-    stops.push(`${seg.color} ${start}deg ${end}deg`);
-  }
-  if (cursor < DAYS_IN_WEEK) {
-    stops.push(`var(--surface2) ${(cursor / DAYS_IN_WEEK) * 360}deg 360deg`);
-  }
-  const background = stops.length > 0 ? `conic-gradient(${stops.join(', ')})` : 'var(--surface2)';
-
-  return (
-    <div className="stacked-ring-metric">
-      <div className="stacked-ring" style={{ background }} aria-hidden>
-        <div className="stacked-ring-inner">
-          <span className="stacked-ring-score">{scoreLabel}</span>
-        </div>
-      </div>
-      <span className="stacked-ring-label">{label}</span>
-    </div>
-  );
-}
-
-function CalmRing({ value, total, label }: { value: number; total: number; label: string }) {
-  const filled = total > 0 ? Math.min(1, value / total) : 0;
-  const filledDeg = filled * 360;
-  const background =
-    filledDeg > 0
-      ? `conic-gradient(#a855f7 0deg ${filledDeg}deg, color-mix(in srgb, #a855f7 22%, var(--surface2)) ${filledDeg}deg 360deg)`
-      : 'color-mix(in srgb, #a855f7 22%, var(--surface2))';
-
-  return (
-    <div className="stacked-ring-metric calm">
-      <div className="stacked-ring" style={{ background }} aria-hidden>
-        <div className="stacked-ring-inner">
-          <span className="stacked-ring-score">
-            {value}/{total}
-          </span>
-        </div>
-      </div>
-      <span className="stacked-ring-label">{label}</span>
-    </div>
-  );
 }
 
 function formatWeekRange(dates: string[]): string {
@@ -91,7 +32,6 @@ function formatWeekRange(dates: string[]): string {
 
 export function WeekProgressChart({
   plan,
-  referenceDate,
   selectedDate,
   onSelectDate,
 }: WeekProgressChartProps) {
@@ -101,36 +41,36 @@ export function WeekProgressChart({
     () =>
       getWeekSummary(
         plan.dailyLogs,
-        referenceDate,
+        today,
         plan.exerciseActivities,
         plan.settings,
         today,
       ),
-    [plan, referenceDate, today],
+    [plan, today],
   );
 
   const complete = useMemo(
-    () => isWeekComplete(plan.dailyLogs, referenceDate),
-    [plan.dailyLogs, referenceDate],
+    () => isWeekComplete(plan.dailyLogs, today, today),
+    [plan.dailyLogs, today],
   );
 
   const score = useMemo(() => {
     if (complete) {
       return getCombinedWeekScore(
         plan.dailyLogs,
-        referenceDate,
+        today,
         plan.exerciseActivities,
         plan.settings,
       );
     }
     return getProjectedWeekScore(
       plan.dailyLogs,
-      referenceDate,
+      today,
       plan.exerciseActivities,
       plan.settings,
       today,
     );
-  }, [plan, referenceDate, today, complete]);
+  }, [plan, today, complete]);
 
   const dietScoreLabel = `${summary.diet.good}/${summary.diet.yellow}/${summary.diet.bad}`;
   const exerciseScoreLabel = `${summary.exercise.full}/${summary.exercise.partial}/${summary.exercise.none}`;
@@ -200,7 +140,7 @@ export function WeekProgressChart({
                 <div key={date} className={className} title={date} aria-disabled>
                   <span className="week-day-label">{WEEKDAY_LABELS[i]}</span>
                   <span className="week-day-num">{dayNum}</span>
-                  <DayStatusIcons plan={plan} date={date} />
+                  <DayStatusIcons plan={plan} date={date} asOfDate={today} />
                 </div>
               );
             }
@@ -215,7 +155,7 @@ export function WeekProgressChart({
               >
                 <span className="week-day-label">{WEEKDAY_LABELS[i]}</span>
                 <span className="week-day-num">{dayNum}</span>
-                <DayStatusIcons plan={plan} date={date} />
+                <DayStatusIcons plan={plan} date={date} asOfDate={today} />
               </button>
             );
           })}

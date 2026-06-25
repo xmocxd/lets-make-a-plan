@@ -6,14 +6,16 @@ This app is a **static React PWA**. Deployment is: build once, host the `dist/` 
 
 ```bash
 npm install
+npm test          # optional but recommended
 npm run build
 ```
 
-That creates `dist/` with:
+`npm run build` runs TypeScript (`tsc -b`) and then Vite. Output goes to `dist/`:
 
 - HTML, JS, and CSS bundles
 - `manifest.webmanifest`
-- Service worker (`registerSW.js` + Workbox assets) via `vite-plugin-pwa`
+- Service worker via `vite-plugin-pwa` (`registerSW.js` + generated `sw.js` / Workbox assets)
+- Static assets from `public/` (favicon, icons)
 
 Test locally before deploying:
 
@@ -33,14 +35,14 @@ Any static host works. Common options:
 2. Import the project at [vercel.com](https://vercel.com).
 3. Build command: `npm run build`
 4. Output directory: `dist`
-5. Deploy.
+5. Deploy. (Vercel handles SPA routing automatically.)
 
 ### Netlify
 
 1. Connect the repo at [netlify.com](https://netlify.com).
 2. Build command: `npm run build`
 3. Publish directory: `dist`
-4. Add a SPA redirect (required for React Router). In `public/_redirects` or Netlify site settings:
+4. SPA fallback: this repo includes `public/_redirects`, which Netlify copies into `dist/`:
 
 ```text
 /*    /index.html   200
@@ -58,7 +60,7 @@ Any static host works. Common options:
 This app expects to be served from the **site root** (`start_url: '/'`, `scope: '/'` in `vite.config.ts`).
 
 - **Works as-is** for a user/org site at `https://username.github.io`.
-- For a **project site** at `https://username.github.io/repo-name/`, you must set `base: '/repo-name/'` in `vite.config.ts` and rebuild before deploying.
+- For a **project site** at `https://username.github.io/repo-name/`, set `base: '/repo-name/'` in `vite.config.ts` and rebuild before deploying.
 
 ## 3. PWA requirements
 
@@ -68,8 +70,26 @@ For install prompts and offline behavior:
 |-------------|-----|
 | **HTTPS** | Service workers only work on HTTPS (localhost is exempt). |
 | **Serve from site root** | Manifest `scope` is `/`. |
-| **SPA fallback** | Routes like `/report` and `/settings` must return `index.html`. |
-| **Do not block SW files** | The host must serve `sw.js`, `workbox-*.js`, and `manifest.webmanifest`. |
+| **SPA fallback** | All client routes must return `index.html` (see below). |
+| **Do not block SW files** | The host must serve `sw.js`, `workbox-*.js`, `registerSW.js`, and `manifest.webmanifest`. |
+
+### Routes that need SPA fallback
+
+React Router handles these in the browser. Direct visits or refreshes on any of them need `index.html`:
+
+| Path | Screen |
+|------|--------|
+| `/` | Log (daily tracking) |
+| `/plan` | Plan (weekly pre-plan) |
+| `/activities` | Exercise activity catalog |
+| `/destress` | Calm |
+| `/destress/list` | Calm suggestion list |
+| `/report` | Report overview |
+| `/report/detail` | Report month detail |
+| `/mantras` | Mantras |
+| `/settings` | Settings |
+
+Legacy paths `/diet` and `/exercise` redirect to `/` in the app, but the SPA fallback still applies if someone bookmarks them.
 
 After deploy:
 
@@ -78,10 +98,9 @@ After deploy:
 
 ## 4. Google Drive sync (optional)
 
-Environment variables are embedded at **build time** (`VITE_*` prefix):
+Environment variables are embedded at **build time** (`VITE_*` prefix). See `.env.example`:
 
 ```bash
-# .env (see .env.example)
 VITE_GOOGLE_CLIENT_ID=...
 VITE_GOOGLE_API_KEY=...   # optional, for Google Picker
 VITE_GOOGLE_APP_ID=...    # optional, for Google Picker
@@ -98,13 +117,15 @@ Without those variables, the app still works in **CSV-only offline mode**.
 
 ## 5. Deployment checklist
 
-1. Run `npm run build`.
-2. Deploy the `dist/` folder to HTTPS static hosting.
-3. Configure SPA rewrite → `index.html` for all routes.
-4. Open the site → DevTools → **Application** → verify **Manifest** and **Service Worker**.
-5. Test offline: load once online, then go offline and reload.
-6. If using Google sync: set `VITE_*` env vars and add the production origin in Google Cloud.
-7. On iPhone: open in Safari and use **Add to Home Screen**.
+1. Run `npm test` (optional).
+2. Run `npm run build`.
+3. Deploy the `dist/` folder to HTTPS static hosting.
+4. Configure SPA rewrite → `index.html` for all routes (if not automatic).
+5. Open the site → DevTools → **Application** → verify **Manifest** and **Service Worker**.
+6. Test key routes: `/`, `/plan`, `/report`, `/settings` (refresh each to confirm SPA fallback).
+7. Test offline: load once online, then go offline and reload.
+8. If using Google sync: set `VITE_*` env vars and add the production origin in Google Cloud.
+9. On iPhone: open in Safari and use **Add to Home Screen**.
 
 ## 6. Updating the live PWA
 

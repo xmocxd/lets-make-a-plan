@@ -5,6 +5,7 @@ import { getCalorieStatus, getLogForDate, isExerciseDayGood } from '../lib/scori
 import { addDays, formatDate, parseDate } from '../lib/dates';
 import { getCalorieTotal, normalizeDailyCalories, sumCalorieEntries } from '../lib/diet/calories';
 import { CalorieRing } from '../components/CalorieRing';
+import { ExerciseToggleList } from '../components/DayToggles';
 import { ToggleButton } from '../components/ToggleButton';
 import { WeekProgressChart } from '../components/WeekProgressChart';
 import type { Mantra } from '../types/plan';
@@ -267,28 +268,13 @@ export function HomePage() {
           </div>
 
           {!log.isRestDay && (
-            <div className="toggle-row">
-              {plan.exerciseActivities.length === 0 ? (
-                <p className="hint">Add activities to log exercise.</p>
-              ) : (
-                plan.exerciseActivities.map((a) => (
-                  <ToggleButton
-                    key={a.id}
-                    pressed={log.exerciseActivityIds.includes(a.id)}
-                    onPress={() => toggleActivity(a.id)}
-                    pressedVariant="good"
-                    iconOn="✓"
-                    iconOff="○"
-                  >
-                    {a.name}
-                    <span className="muted-inline">
-                      {' '}
-                      ({a.goalWeight === 'full' ? 'full' : '½'})
-                    </span>
-                  </ToggleButton>
-                ))
-              )}
-            </div>
+            <ExerciseToggleList
+              activities={plan.exerciseActivities}
+              selectedIds={log.exerciseActivityIds}
+              onToggle={toggleActivity}
+              showWeight
+              emptyHint="Add activities to log exercise."
+            />
           )}
         </div>
 
@@ -310,7 +296,6 @@ export function HomePage() {
 
       <WeekProgressChart
         plan={plan}
-        referenceDate={selectedDate}
         selectedDate={selectedDate}
         onSelectDate={(date) => {
           if (date <= today) setSelectedDate(date);

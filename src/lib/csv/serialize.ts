@@ -137,7 +137,7 @@ function kvSection(rows: string[][]): Record<string, string> {
 }
 
 export function deserializePlan(csv: string): PlanData {
-  const lines = csv.split('\n');
+  const lines = csv.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   let i = 0;
   const metaKv: Record<string, string> = {};
   const settingsKv: Record<string, string> = {};

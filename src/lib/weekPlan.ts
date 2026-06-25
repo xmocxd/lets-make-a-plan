@@ -1,19 +1,13 @@
 import type { DailyLog, DayPlan, ExerciseActivity, GoalWeight, PlanData, Settings } from '../types/plan';
+import { WEEK_SCORE_WEIGHTS } from './constants';
+import { emptyDayPlan } from './defaults';
 import { getMondayWeekStart, getWeekDates } from './dates';
-import { scoreCalmComponentWeek, scoreExerciseComponentWeek, WEEK_SCORE_WEIGHTS } from './scoring';
+import { scoreCalmComponentWeek, scoreExerciseComponentWeek } from './scoring';
 
 const EXERCISE_CALM_WEIGHT = WEEK_SCORE_WEIGHTS.exercise + WEEK_SCORE_WEIGHTS.calm;
 
 export function getDayPlan(plans: DayPlan[], date: string): DayPlan {
-  const found = plans.find((p) => p.date === date);
-  if (found) return found;
-  return {
-    date,
-    exerciseActivityIds: [],
-    isRestDay: false,
-    isCheatDay: false,
-    destressPlanned: false,
-  };
+  return plans.find((p) => p.date === date) ?? emptyDayPlan(date);
 }
 
 export function dayPlanToLog(plan: DayPlan): DailyLog {
